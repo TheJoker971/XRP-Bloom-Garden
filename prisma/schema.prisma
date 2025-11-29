@@ -69,12 +69,14 @@ model Event {
   startDate     DateTime @default(now())
   endDate       DateTime?
   rewardNFT     String?  // URI du NFT de récompense
+  associationId String?  // ID de l'association qui a créé l'événement
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   
   contributions EventContribution[]
   
   @@map("events")
+  @@index([associationId])
 }
 
 model EventContribution {

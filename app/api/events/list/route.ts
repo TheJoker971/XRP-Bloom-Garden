@@ -63,6 +63,7 @@ export async function GET(request: NextRequest) {
         healthPercentage: (event.currentHealth / event.maxHealth) * 100,
         startDate: event.startDate,
         endDate: event.endDate,
+        associationId: event.associationId,
         leaderboard,
         totalContributions: event.contributions.length,
         totalAmount: event.contributions.reduce((sum, c) => sum + c.amount, 0),

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Header } from '@/components/Header';
-import { Save, Building2, MapPin, Phone, Globe, Wallet, Send, Image, TrendingUp } from 'lucide-react';
+import { Save, Building2, MapPin, Phone, Globe, Wallet, Send, Image, TrendingUp, Flame, Plus } from 'lucide-react';
 import { useXRPLWallet } from '@/components/providers/XRPLWalletProvider';
 
 export default function AssociationDashboard() {
@@ -23,15 +23,25 @@ export default function AssociationDashboard() {
     walletAddress: '',
   });
   
-  const [activeTab, setActiveTab] = useState<'info' | 'wallet' | 'nfts'>('info');
+  const [activeTab, setActiveTab] = useState<'info' | 'wallet' | 'nfts' | 'events'>('info');
   const [transferData, setTransferData] = useState({ to: '', amount: '' });
   const [transferring, setTransferring] = useState(false);
   const [nfts, setNfts] = useState<any[]>([]);
   const [loadingNFTs, setLoadingNFTs] = useState(false);
   const { walletInfo, balance, refreshBalance } = useXRPLWallet();
+  const [eventForm, setEventForm] = useState({
+    name: '',
+    description: '',
+    maxHealth: '1000',
+    multiplier: '2.0',
+    durationDays: '7',
+  });
+  const [creatingEvent, setCreatingEvent] = useState(false);
+  const [activeEvent, setActiveEvent] = useState<any>(null);
 
   useEffect(() => {
     fetchProfile();
+    fetchActiveEvent();
   }, []);
 
   const fetchProfile = async () => {
@@ -190,6 +200,60 @@ export default function AssociationDashboard() {
     }
   };
 
+  const fetchActiveEvent = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token || !association) return;
+
+      const response = await fetch('/api/events/list');
+      const data = await response.json();
+      
+      // Trouver l'événement actif de cette association
+      const myEvent = data.events?.find((e: any) => e.associationId === association.id && e.status === 'active');
+      setActiveEvent(myEvent || null);
+    } catch (error) {
+      console.error('Erreur lors du chargement de l\'événement:', error);
+    }
+  };
+
+  const handleCreateEvent = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCreatingEvent(true);
+    setMessage(null);
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/events/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(eventForm),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Erreur lors de la création de l\'événement');
+      }
+
+      setMessage({ type: 'success', text: 'Événement créé avec succès !' });
+      setEventForm({
+        name: '',
+        description: '',
+        maxHealth: '1000',
+        multiplier: '2.0',
+        durationDays: '7',
+      });
+      await fetchActiveEvent();
+    } catch (error: any) {
+      setMessage({ type: 'error', text: error.message });
+    } finally {
+      setCreatingEvent(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-sky-50">
@@ -253,6 +317,17 @@ export default function AssociationDashboard() {
               >
                 <Image className="w-4 h-4 inline mr-2" />
                 Mes NFTs
+              </button>
+              <button
+                onClick={() => setActiveTab('events')}
+                className={`px-6 py-4 font-medium transition-colors border-b-2 ${
+                  activeTab === 'events'
+                    ? 'border-green-600 text-green-600'
+                    : 'border-transparent text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <Flame className="w-4 h-4 inline mr-2" />
+                Événements
               </button>
             </div>
           </div>
@@ -549,6 +624,150 @@ export default function AssociationDashboard() {
                       Veuillez connecter votre wallet depuis le header pour voir vos NFTs.
                     </p>
                   </div>
+                )}
+              </div>
+            )}
+
+            {activeTab === 'events' && (
+              <div className="space-y-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                    <Flame className="w-6 h-6 text-orange-600" />
+                    Gestion des Événements
+                  </h3>
+                </div>
+
+                {/* Événement actif */}
+                {activeEvent ? (
+                  <div className="bg-gradient-to-r from-orange-50 to-red-50 rounded-xl p-6 border-4 border-orange-400 mb-6">
+                    <div className="flex items-start justify-between mb-4">
+                      <div>
+                        <h4 className="text-2xl font-bold text-gray-900 mb-2">{activeEvent.name}</h4>
+                        <p className="text-gray-700 mb-2">{activeEvent.description}</p>
+                        <div className="flex items-center gap-4 text-sm">
+                          <span className="font-bold text-orange-600">
+                            {activeEvent.currentHealth} / {activeEvent.maxHealth} PV
+                          </span>
+                          <span className="text-gray-600">Multiplicateur: x{activeEvent.multiplier}</span>
+                        </div>
+                      </div>
+                      <span className="px-4 py-2 bg-green-500 text-white rounded-full font-bold text-sm">
+                        ACTIF
+                      </span>
+                    </div>
+                    <a
+                      href={`/event/${activeEvent.id}`}
+                      className="inline-block px-6 py-3 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-lg font-bold hover:from-orange-700 hover:to-red-700 transition"
+                    >
+                      Voir l'événement →
+                    </a>
+                  </div>
+                ) : (
+                  <div className="bg-gray-50 rounded-xl p-6 border-2 border-gray-200 mb-6">
+                    <p className="text-gray-600 text-center py-4">
+                      Aucun événement actif. Créez-en un nouveau ci-dessous.
+                    </p>
+                  </div>
+                )}
+
+                {/* Formulaire de création */}
+                {!activeEvent && (
+                  <form onSubmit={handleCreateEvent} className="bg-white border border-gray-200 rounded-xl p-6 space-y-4">
+                    <h4 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                      <Plus className="w-5 h-5 text-green-600" />
+                      Créer un nouvel événement
+                    </h4>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Nom de l'événement *
+                      </label>
+                      <input
+                        type="text"
+                        value={eventForm.name}
+                        onChange={(e) => setEventForm({ ...eventForm, name: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                        required
+                        placeholder="Ex: Brasier des Cimes"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Description
+                      </label>
+                      <textarea
+                        value={eventForm.description}
+                        onChange={(e) => setEventForm({ ...eventForm, description: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                        rows={3}
+                        placeholder="Décrivez votre événement de levée de fonds..."
+                      />
+                    </div>
+
+                    <div className="grid md:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Points de vie maximum *
+                        </label>
+                        <input
+                          type="number"
+                          value={eventForm.maxHealth}
+                          onChange={(e) => setEventForm({ ...eventForm, maxHealth: e.target.value })}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                          required
+                          min="100"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Multiplicateur *
+                        </label>
+                        <input
+                          type="number"
+                          step="0.1"
+                          value={eventForm.multiplier}
+                          onChange={(e) => setEventForm({ ...eventForm, multiplier: e.target.value })}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                          required
+                          min="1"
+                          max="5"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Durée (jours) *
+                        </label>
+                        <input
+                          type="number"
+                          value={eventForm.durationDays}
+                          onChange={(e) => setEventForm({ ...eventForm, durationDays: e.target.value })}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                          required
+                          min="1"
+                          max="30"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                      <p className="text-sm text-yellow-800">
+                        <strong>⚠️ Important :</strong> Vous ne pouvez avoir qu'un seul événement actif à la fois. 
+                        L'événement se terminera automatiquement à la date de fin ou lorsque les points de vie atteignent 0.
+                      </p>
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={creatingEvent}
+                      className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-lg hover:from-orange-700 hover:to-red-700 transition disabled:opacity-50"
+                    >
+                      <Flame className="w-5 h-5" />
+                      {creatingEvent ? 'Création en cours...' : 'Créer l\'événement'}
+                    </button>
+                  </form>
                 )}
               </div>
             )}

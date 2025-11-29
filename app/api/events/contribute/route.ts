@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { walletAddress, packType, amount, txHash } = body;
+    const { walletAddress, packType, amount, txHash, eventId } = body;
 
     if (!walletAddress || !packType || !amount) {
       return NextResponse.json(
@@ -13,15 +13,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Récupérer l'événement actif
-    const event = await prisma.event.findFirst({
-      where: { status: 'active' },
-    });
+    // Récupérer l'événement (soit par ID, soit le premier actif)
+    let event;
+    if (eventId) {
+      event = await prisma.event.findUnique({
+        where: { id: eventId },
+      });
+    } else {
+      event = await prisma.event.findFirst({
+        where: { status: 'active' },
+      });
+    }
 
     if (!event) {
       return NextResponse.json(
-        { error: 'Aucun événement actif' },
+        { error: 'Événement introuvable' },
         { status: 404 }
+      );
+    }
+
+    if (event.status !== 'active') {
+      return NextResponse.json(
+        { error: 'Cet événement n\'est pas actif' },
+        { status: 400 }
       );
     }
 
@@ -68,57 +82,69 @@ export async function POST(request: NextRequest) {
     });
 
     // Si l'événement est terminé, distribuer les récompenses
-    let winner = null;
+    let winner = false;
+    let heroAwarded = false;
     if (newHealth <= 0) {
-      // Trouver le top 3
-      const topContributors = await prisma.$queryRaw<Array<{ walletAddress: string; totalTickets: bigint }>>`
-        SELECT 
-          walletAddress,
-          SUM(tickets) as totalTickets
-        FROM event_contributions
-        WHERE eventId = ${event.id}
-        GROUP BY walletAddress
-        ORDER BY totalTickets DESC
-        LIMIT 3
-      `;
-
-      // Créer le héros Ignis s'il n'existe pas
-      let hero = await prisma.hero.findFirst({
-        where: { name: 'Ignis, le Soldat du Feu' },
-      });
-
-      if (!hero) {
-        hero = await prisma.hero.create({
-          data: {
-            name: 'Ignis, le Soldat du Feu',
-            description: 'Héros légendaire qui a combattu le Brasier des Cimes',
-            imageUrl: '/heroes/ignis.png',
-            rarity: 'legendary',
-            eventId: event.id,
-          },
-        });
-      }
-
-      // Attribuer le héros aux top 3
-      for (const contributor of topContributors) {
-        const existing = await prisma.heroOwnership.findFirst({
-          where: {
-            heroId: hero.id,
-            walletAddress: contributor.walletAddress,
-          },
+      try {
+        // Trouver le top 3 des contributeurs
+        const allContributions = await prisma.eventContribution.findMany({
+          where: { eventId: event.id },
+          select: { walletAddress: true, tickets: true },
         });
 
-        if (!existing) {
-          await prisma.heroOwnership.create({
+        const aggregatedContributions = new Map<string, number>();
+        for (const c of allContributions) {
+          aggregatedContributions.set(c.walletAddress, (aggregatedContributions.get(c.walletAddress) || 0) + c.tickets);
+        }
+
+        const topContributors = Array.from(aggregatedContributions.entries())
+          .sort(([, ticketsA], [, ticketsB]) => ticketsB - ticketsA)
+          .slice(0, 3)
+          .map(([walletAddress, totalTickets]) => ({ walletAddress, totalTickets }));
+
+        // Créer le héros Ignis s'il n'existe pas
+        let hero = await prisma.hero.findFirst({
+          where: { name: 'Ignis, le Soldat du Feu' },
+        });
+
+        if (!hero) {
+          hero = await prisma.hero.create({
             data: {
+              name: 'Ignis, le Soldat du Feu',
+              description: 'Héros légendaire qui a combattu le Brasier des Cimes',
+              imageUrl: '/heroes/ignis.png',
+              rarity: 'legendary',
+              eventId: event.id,
+            },
+          });
+        }
+
+        // Attribuer le héros aux top 3
+        for (const contributor of topContributors) {
+          const existing = await prisma.heroOwnership.findFirst({
+            where: {
               heroId: hero.id,
               walletAddress: contributor.walletAddress,
             },
           });
-        }
-      }
 
-      winner = topContributors[0]?.walletAddress === walletAddress;
+          if (!existing) {
+            await prisma.heroOwnership.create({
+              data: {
+                heroId: hero.id,
+                walletAddress: contributor.walletAddress,
+              },
+            });
+          }
+        }
+        
+        heroAwarded = true;
+        winner = topContributors.some(c => c.walletAddress === walletAddress);
+      } catch (heroError) {
+        console.error('Erreur lors de la distribution des héros:', heroError);
+        // L'événement est terminé, mais la distribution des héros a échoué.
+        // On ne renvoie pas d'erreur 500 pour ne pas faire disparaître l'événement.
+      }
     }
 
     return NextResponse.json({
@@ -131,6 +157,7 @@ export async function POST(request: NextRequest) {
       tickets,
       isWinner: winner,
       eventCompleted: newHealth <= 0,
+      heroAwarded,
     });
   } catch (error) {
     console.error('Erreur lors de la contribution:', error);

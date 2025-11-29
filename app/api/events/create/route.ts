@@ -51,14 +51,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Vérifier qu'il n'y a pas déjà un événement actif
+    // Vérifier qu'il n'y a pas déjà un événement actif pour cette association
     const activeEvent = await prisma.event.findFirst({
-      where: { status: 'active' },
+      where: { 
+        status: 'active',
+        associationId: user.association.id,
+      },
     });
 
     if (activeEvent) {
       return NextResponse.json(
-        { error: 'Un événement est déjà actif. Veuillez attendre qu\'il se termine.' },
+        { error: 'Vous avez déjà un événement actif. Veuillez attendre qu\'il se termine avant d\'en créer un nouveau.' },
         { status: 400 }
       );
     }
@@ -79,6 +82,7 @@ export async function POST(request: NextRequest) {
         multiplier: parseFloat(multiplier) || 2.0,
         endDate,
         rewardNFT: 'ipfs://QmIgnisHeroNFT', // URI du NFT Ignis
+        associationId: user.association.id,
       },
     });
 

@@ -45,6 +45,15 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
     return () => clearInterval(interval);
   }, [resolvedParams.id]);
 
+  useEffect(() => {
+    // Réafficher la popup de crise si l'événement est actif
+    if (eventData?.event && eventData.event.status === 'active') {
+      setShowCrisisPopup(true);
+    } else {
+      setShowCrisisPopup(false);
+    }
+  }, [eventData]);
+
   const fetchEventData = async () => {
     try {
       const response = await fetch(`/api/events/${resolvedParams.id}`);

@@ -19,19 +19,32 @@ export async function GET(request: NextRequest) {
     }
 
     // Calculer le leaderboard
-    const leaderboard = await prisma.$queryRaw`
-      SELECT 
-        walletAddress,
-        SUM(tickets) as totalTickets,
-        SUM(damage) as totalDamage,
-        SUM(amount) as totalAmount,
-        COUNT(*) as contributions
-      FROM event_contributions
-      WHERE eventId = ${event.id}
-      GROUP BY walletAddress
-      ORDER BY totalTickets DESC
-      LIMIT 10
-    `;
+    const allContributions = await prisma.eventContribution.findMany({
+      where: { eventId: event.id },
+      select: {
+        walletAddress: true,
+        tickets: true,
+        damage: true,
+        amount: true,
+      },
+    });
+
+    // Agrégation JavaScript pour éviter les BigInt
+    const aggregatedContributions = new Map<string, { totalTickets: number; totalDamage: number; totalAmount: number; contributions: number }>();
+    for (const c of allContributions) {
+      const current = aggregatedContributions.get(c.walletAddress) || { totalTickets: 0, totalDamage: 0, totalAmount: 0, contributions: 0 };
+      aggregatedContributions.set(c.walletAddress, {
+        totalTickets: current.totalTickets + c.tickets,
+        totalDamage: current.totalDamage + c.damage,
+        totalAmount: current.totalAmount + c.amount,
+        contributions: current.contributions + 1,
+      });
+    }
+
+    const leaderboard = Array.from(aggregatedContributions.entries())
+      .map(([walletAddress, stats]) => ({ walletAddress, ...stats }))
+      .sort((a, b) => b.totalTickets - a.totalTickets)
+      .slice(0, 10);
 
     return NextResponse.json({
       event: {
