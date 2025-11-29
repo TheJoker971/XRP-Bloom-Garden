@@ -33,7 +33,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
   const [loading, setLoading] = useState(true);
   const [purchasing, setPurchasing] = useState(false);
   const [showVictory, setShowVictory] = useState(false);
-  const [showCrisisPopup, setShowCrisisPopup] = useState(true);
+  const [showCrisisPopup, setShowCrisisPopup] = useState(false);
   const [lastDamage, setLastDamage] = useState<number | null>(null);
   const [notification, setNotification] = useState<string | null>(null);
   const [damageHistory, setDamageHistory] = useState<Array<{damage: number, timestamp: number}>>([]);
@@ -46,13 +46,18 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
   }, [resolvedParams.id]);
 
   useEffect(() => {
-    // Réafficher la popup de crise si l'événement est actif
+    // Afficher la popup de crise uniquement au premier chargement si l'événement est actif
+    // et si l'utilisateur ne l'a pas déjà fermée pour cet événement
     if (eventData?.event && eventData.event.status === 'active') {
-      setShowCrisisPopup(true);
+      const popupClosedKey = `crisis_popup_closed_${resolvedParams.id}`;
+      const wasClosed = localStorage.getItem(popupClosedKey);
+      if (!wasClosed) {
+        setShowCrisisPopup(true);
+      }
     } else {
       setShowCrisisPopup(false);
     }
-  }, [eventData]);
+  }, [eventData, resolvedParams.id]);
 
   const fetchEventData = async () => {
     try {
@@ -408,8 +413,24 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
       </div>
 
       {showCrisisPopup && isCrisis && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-          <div className="bg-gradient-to-br from-orange-50 to-red-50 rounded-2xl p-8 max-w-2xl w-full border-4 border-orange-500 shadow-2xl animate-pulse-slow">
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[100] p-4 backdrop-blur-sm overflow-y-auto">
+          {/* Images du pompier de chaque côté - à l'extérieur de la popup */}
+          <div className="absolute left-8 top-1/2 -translate-y-1/2 hidden lg:block z-[101] pointer-events-none">
+            <img 
+              src="/pompier.png" 
+              alt="Pompier" 
+              className="w-40 h-40 object-contain animate-bounce"
+            />
+          </div>
+          <div className="absolute right-8 top-1/2 -translate-y-1/2 hidden lg:block z-[101] pointer-events-none">
+            <img 
+              src="/pompier.png" 
+              alt="Pompier" 
+              className="w-40 h-40 object-contain animate-bounce scale-x-[-1]"
+            />
+          </div>
+          
+          <div className="bg-gradient-to-br from-orange-50 to-red-50 rounded-2xl p-8 max-w-2xl w-full border-4 border-orange-500 shadow-2xl animate-pulse-slow relative z-[102] my-auto">
             <div className="text-center mb-6">
               <div className="flex items-center justify-center gap-4 mb-4">
                 <Flame className="w-16 h-16 text-orange-600 animate-bounce" />
@@ -442,7 +463,12 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
               </div>
 
               <button
-                onClick={() => setShowCrisisPopup(false)}
+                onClick={() => {
+                  setShowCrisisPopup(false);
+                  // Mémoriser que l'utilisateur a fermé la popup pour cet événement
+                  const popupClosedKey = `crisis_popup_closed_${resolvedParams.id}`;
+                  localStorage.setItem(popupClosedKey, 'true');
+                }}
                 className="w-full px-8 py-4 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-xl font-bold text-xl hover:from-orange-700 hover:to-red-700 transition shadow-lg"
               >
                 🚨 Rejoindre la lutte !

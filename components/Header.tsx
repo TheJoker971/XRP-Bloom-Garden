@@ -98,7 +98,7 @@ export function Header() {
                 Tirage
               </Link>
               <Link
-                href="/event"
+                href="/events"
                 className="text-gray-700 hover:text-orange-600 font-medium transition-colors flex items-center gap-1 text-sm"
               >
                 🔥 Événement
