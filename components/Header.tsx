@@ -104,10 +104,10 @@ export function Header() {
                 🔥 Événements
               </Link>
               <Link
-                href="/charte"
-                className="text-gray-700 hover:text-sky-600 font-medium transition-colors text-sm"
+                href="/donate"
+                className="text-gray-700 hover:text-green-600 font-medium transition-colors text-sm"
               >
-                Charte
+                💝 Faire un don
               </Link>
               <Link
                 href="/partnership"

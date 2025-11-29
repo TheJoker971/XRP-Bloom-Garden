@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, use } from 'react';
 import { Header } from '@/components/Header';
 import { useXRPLWallet } from '@/components/providers/XRPLWalletProvider';
 import { Flame, Droplet, Trophy, Zap, Users } from 'lucide-react';
@@ -26,7 +26,8 @@ interface EventData {
   }>;
 }
 
-export default function EventDetailPage({ params }: { params: { id: string } }) {
+export default function EventDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const resolvedParams = use(params);
   const { isConnected, walletInfo } = useXRPLWallet();
   const [eventData, setEventData] = useState<EventData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -42,11 +43,11 @@ export default function EventDetailPage({ params }: { params: { id: string } }) 
     fetchEventData();
     const interval = setInterval(fetchEventData, 5000);
     return () => clearInterval(interval);
-  }, [params.id]);
+  }, [resolvedParams.id]);
 
   const fetchEventData = async () => {
     try {
-      const response = await fetch(`/api/events/${params.id}`);
+      const response = await fetch(`/api/events/${resolvedParams.id}`);
       const data = await response.json();
       setEventData(data);
     } catch (error) {
@@ -78,7 +79,7 @@ export default function EventDetailPage({ params }: { params: { id: string } }) 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          eventId: params.id,
+          eventId: resolvedParams.id,
           walletAddress: walletInfo.address,
           packType,
           amount,

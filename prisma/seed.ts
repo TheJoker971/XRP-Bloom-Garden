@@ -6,8 +6,11 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('🌱 Début du seed de la base de données...\n');
 
-  // Nettoyer la base de données
+  // Nettoyer la base de données dans le bon ordre (dépendances)
   console.log('🧹 Nettoyage de la base de données...');
+  await prisma.heroOwnership.deleteMany();
+  await prisma.hero.deleteMany();
+  await prisma.eventContribution.deleteMany();
   await prisma.event.deleteMany();
   await prisma.admin.deleteMany();
   await prisma.association.deleteMany();
@@ -164,49 +167,167 @@ async function main() {
   }
   console.log('✅ Utilisateurs créés\n');
 
-  // 4. Créer un événement
-  console.log('🔥 Création de l\'événement "Le Brasier des Cimes"...');
-  await prisma.event.create({
+  // 4. Créer des événements
+  console.log('🔥 Création des événements...');
+  
+  const event1 = await prisma.event.create({
     data: {
       name: 'Le Brasier des Cimes',
-      description: 'Événement spécial : Sauvez la forêt des flammes ! Chaque don compte double pour éteindre le brasier.',
+      description: 'Un incendie dévastateur menace la forêt. Aidez-nous à éteindre les flammes avant qu\'il ne soit trop tard !',
       type: 'boss',
       status: 'active',
       currentHealth: 750,
       maxHealth: 1000,
       multiplier: 2.0,
       rewardNFT: 'ipfs://QmIgnisHeroNFT123456',
+      endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // +7 jours
     },
   });
-  console.log('✅ Événement créé (750/1000 HP restants)\n');
+  console.log('  ✓ Le Brasier des Cimes (ACTIF - 750/1000 HP)');
 
-  // 5. Créer le héros Ignis
-  console.log('🦸 Création du héros "Ignis"...');
-  const event = await prisma.event.findFirst({ where: { name: 'Le Brasier des Cimes' } });
-  await prisma.hero.create({
+  const event2 = await prisma.event.create({
+    data: {
+      name: 'La Grande Sécheresse',
+      description: 'Une sécheresse historique frappe la région. Chaque goutte d\'eau compte pour sauver les cultures.',
+      type: 'boss',
+      status: 'completed',
+      currentHealth: 0,
+      maxHealth: 800,
+      multiplier: 1.5,
+      rewardNFT: 'ipfs://QmAquaHeroNFT789',
+      startDate: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000), // -14 jours
+      endDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // -7 jours
+    },
+  });
+  console.log('  ✓ La Grande Sécheresse (TERMINÉ)');
+
+  console.log('✅ Événements créés\n');
+
+  // 5. Créer des héros
+  console.log('🦸 Création des héros...');
+  
+  const heroIgnis = await prisma.hero.create({
     data: {
       name: 'Ignis, le Soldat du Feu',
       description: 'Un héros légendaire qui a combattu les flammes pour sauver la forêt. Récompense exclusive pour les meilleurs donateurs.',
-      imageUrl: 'ipfs://QmIgnisHeroImage123456',
+      imageUrl: '/heroes/ignis.png',
       rarity: 'legendary',
-      eventId: event?.id,
+      eventId: event1.id,
     },
   });
-  console.log('✅ Héros "Ignis" créé\n');
+  console.log('  ✓ Ignis (Legendary)');
+
+  const heroAqua = await prisma.hero.create({
+    data: {
+      name: 'Aqua, Gardienne des Eaux',
+      description: 'Protectrice des océans et des rivières, elle apporte l\'eau là où elle manque.',
+      imageUrl: '/heroes/aqua.png',
+      rarity: 'legendary',
+      eventId: event2.id,
+    },
+  });
+  console.log('  ✓ Aqua (Legendary)');
+
+  const heroTerra = await prisma.hero.create({
+    data: {
+      name: 'Terra, Esprit de la Terre',
+      description: 'Gardien des forêts et de la nature, il fait pousser les arbres d\'un simple geste.',
+      imageUrl: '/heroes/terra.png',
+      rarity: 'epic',
+    },
+  });
+  console.log('  ✓ Terra (Epic)');
+
+  console.log('✅ Héros créés\n');
+
+  // 6. Créer des contributions pour l'événement terminé
+  console.log('📊 Création des contributions...');
+  
+  const demoWallets = [
+    'rN7n7otQDd6FczFgLdlqtyMVrn3HMfXoZM',
+    'rPEPPER7kfTD9w2To4CQk6UCfuHM9c6GDY',
+    'rU6K7V3Po4snVhBBaU29sesqs2qTQJWDw1',
+    'rLHzPsX6oXkzU9rFYentvBz5FBrqtMxoPb',
+  ];
+
+  for (let i = 0; i < demoWallets.length; i++) {
+    const numContributions = Math.floor(Math.random() * 3) + 1;
+    for (let j = 0; j < numContributions; j++) {
+      const isPremium = Math.random() > 0.6;
+      await prisma.eventContribution.create({
+        data: {
+          eventId: event2.id,
+          walletAddress: demoWallets[i],
+          packType: isPremium ? 'premium' : 'basic',
+          amount: isPremium ? 20 : 5,
+          damage: isPremium ? 75 : 15, // avec multiplier 1.5
+          tickets: isPremium ? 5 : 1,
+          txHash: `demo_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        },
+      });
+    }
+  }
+  console.log('  ✓ Contributions créées pour "La Grande Sécheresse"');
+
+  // Quelques contributions pour l'événement actif
+  await prisma.eventContribution.create({
+    data: {
+      eventId: event1.id,
+      walletAddress: demoWallets[0],
+      packType: 'premium',
+      amount: 20,
+      damage: 100, // avec multiplier 2.0
+      tickets: 5,
+      txHash: `demo_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+    },
+  });
+  console.log('  ✓ Contributions créées pour "Le Brasier des Cimes"');
+
+  console.log('✅ Contributions créées\n');
+
+  // 7. Attribuer des héros aux meilleurs contributeurs
+  console.log('🏆 Attribution des héros...');
+  
+  await prisma.heroOwnership.create({
+    data: {
+      heroId: heroAqua.id,
+      walletAddress: demoWallets[0],
+      nftTokenId: `NFT_${Date.now()}_001`,
+    },
+  });
+  console.log('  ✓ Aqua attribué au top contributeur');
+
+  await prisma.heroOwnership.create({
+    data: {
+      heroId: heroTerra.id,
+      walletAddress: demoWallets[1],
+      nftTokenId: `NFT_${Date.now()}_002`,
+    },
+  });
+  console.log('  ✓ Terra attribué à un contributeur');
+
+  console.log('✅ Héros attribués\n');
 
   console.log('🎉 Seed terminé avec succès!\n');
   console.log('📋 Récapitulatif:');
   console.log('  • 1 Administrateur');
   console.log('  • 6 Associations (4 approuvées, 1 en attente, 1 rejetée)');
   console.log('  • 4 Utilisateurs');
-  console.log('  • 1 Événement actif');
-  console.log('  • 1 Héros légendaire (Ignis)\n');
+  console.log('  • 2 Événements (1 actif, 1 terminé)');
+  console.log('  • 3 Héros (2 Legendary, 1 Epic)');
+  console.log('  • ~10 Contributions');
+  console.log('  • 2 Héros attribués\n');
   console.log('🔑 Identifiants de test:');
   console.log('  Admin: admin@xrpbloomgarden.com / admin123');
   console.log('  Asso 1: contact@greenforest.org / forest123');
   console.log('  Asso 2: info@oceanblue.org / ocean123');
+  console.log('  Asso 3: contact@helpinghearts.org / hearts123');
+  console.log('  Asso 4: contact@firefighters.org / fire123');
   console.log('  User 1: alice@example.com / alice123');
   console.log('  User 2: bob@example.com / bob123\n');
+  console.log('🎮 Événements:');
+  console.log('  • Le Brasier des Cimes (ACTIF - 750/1000 HP)');
+  console.log('  • La Grande Sécheresse (TERMINÉ)\n');
 }
 
 main()
