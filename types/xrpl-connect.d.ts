@@ -3,6 +3,7 @@ declare namespace JSX {
     'xrpl-wallet-connector': React.DetailedHTMLProps<
       React.HTMLAttributes<HTMLElement> & {
         'primary-wallet'?: string;
+        'network'?: 'mainnet' | 'testnet' | 'devnet';
         ref?: React.Ref<any>;
       },
       HTMLElement

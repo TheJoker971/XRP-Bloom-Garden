@@ -50,6 +50,12 @@ export function Header() {
                 Accueil
               </Link>
               <Link
+                href="/draw"
+                className="text-gray-700 hover:text-green-600 font-medium transition-colors"
+              >
+                Tirage
+              </Link>
+              <Link
                 href="/charte"
                 className="text-gray-700 hover:text-sky-600 font-medium transition-colors"
               >

@@ -34,3 +34,14 @@ body {
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   transition-duration: 150ms;
 }
+
+/* Styles pour xrpl-wallet-connector - amélioration du hover */
+xrpl-wallet-connector {
+  --xc-connect-button-transition: all 0.2s ease-in-out;
+  --xc-connect-button-hover-transform: translateY(-1px);
+  --xc-connect-button-hover-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);
+}
+
+/* Note: Les erreurs MetaMask sont normales et n'affectent pas XRPL
+   MetaMask essaie d'injecter un provider Ethereum, mais nous utilisons XRPL
+   qui est une blockchain différente. Ces erreurs peuvent être ignorées. */

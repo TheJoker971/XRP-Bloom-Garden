@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useEffect, createElement } from "react";
+import { useState, useEffect, createElement, useRef } from "react";
 import { useWallet } from "./providers/WalletProvider";
-import { useWalletConnector } from "../hooks/useWalletConnector";
 
 const THEMES = {
   light: {
@@ -25,10 +24,10 @@ const THEMES = {
 };
 
 export function WalletConnector() {
-  const { walletManager } = useWallet();
-  const walletConnectorRef = useWalletConnector(walletManager);
+  const walletConnectorRef = useRef<any>(null);
   const [currentTheme] = useState("light");
   const [isClient, setIsClient] = useState(false);
+  const [isRegistered, setIsRegistered] = useState(false);
 
   useEffect(() => {
     setIsClient(true);
@@ -41,6 +40,11 @@ export function WalletConnector() {
         // Define the custom element if not already defined
         if (!customElements.get("xrpl-wallet-connector")) {
           customElements.define("xrpl-wallet-connector", WalletConnectorElement);
+          setIsRegistered(true);
+          console.log("xrpl-wallet-connector registered successfully");
+        } else {
+          setIsRegistered(true);
+          console.log("xrpl-wallet-connector already registered");
         }
       } catch (error) {
         console.error("Failed to load xrpl-connect:", error);
@@ -50,8 +54,35 @@ export function WalletConnector() {
     registerWebComponent();
   }, []);
 
-  if (!isClient) {
-    return null;
+  // Attendre que l'élément soit monté et prêt
+  useEffect(() => {
+    if (isClient && isRegistered) {
+      // Attendre que le composant soit complètement monté
+      const timer = setTimeout(() => {
+        if (walletConnectorRef.current) {
+          const element = walletConnectorRef.current;
+          
+          // Le composant xrpl-wallet-connector détecte automatiquement les wallets XRPL
+          // (Gem, Xaman, etc.) s'ils sont installés dans le navigateur
+          console.log("✅ Wallet connector prêt");
+          
+          // Vérifier que l'élément est bien défini
+          if (element && element.shadowRoot) {
+            console.log("✅ Shadow DOM disponible");
+          }
+        }
+      }, 300);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [isClient, isRegistered]);
+
+  if (!isClient || !isRegistered) {
+    return (
+      <div className="px-4 py-2 bg-gray-100 text-gray-600 rounded-lg text-sm">
+        Chargement...
+      </div>
+    );
   }
 
   return createElement(
@@ -59,14 +90,37 @@ export function WalletConnector() {
     {
       ref: walletConnectorRef,
       id: "wallet-connector",
+      // Configuration pour XRPL natif (testnet)
+      // Note: Si vous utilisez des contrats Solidity, vous devez utiliser la sidechain EVM XRPL
+      // qui nécessite MetaMask configuré pour la sidechain EVM (pas le XRPL natif)
+      "network": "testnet", // "testnet" pour XRPL natif, ou "mainnet" pour la production
+      "primary-wallet": "xaman", // Wallet XRPL natif préféré (Gem, Xaman, etc.)
       style: {
         ...(THEMES[currentTheme as keyof typeof THEMES] || THEMES.light),
         "--xc-font-family": "inherit",
         "--xc-border-radius": "12px",
         "--xc-modal-box-shadow": "0 10px 40px rgba(0, 0, 0, 0.15)",
         "--xc-button-border-radius": "8px",
+        // Styles du bouton Connect Wallet
+        "--xc-connect-button-background": "#16A34A", // green-600
+        "--xc-connect-button-color": "#ffffff",
+        "--xc-connect-button-hover-background": "#15803D", // green-700
+        "--xc-connect-button-hover-color": "#ffffff",
+        "--xc-connect-button-border": "none",
+        "--xc-connect-button-padding-vertical": "10px",
+        "--xc-connect-button-padding-horizontal": "20px",
+        "--xc-connect-button-font-weight": "600",
+        "--xc-connect-button-transition": "all 0.2s ease-in-out",
+        // Styles des boutons primaires dans le modal
+        "--xc-primary-button-background": "#16A34A", // green-600
+        "--xc-primary-button-color": "#ffffff",
+        "--xc-primary-button-hover-background": "#15803D", // green-700
+        "--xc-primary-button-hover-color": "#ffffff",
+        "--xc-primary-button-border-radius": "8px",
+        // Styles des boutons de wallet dans le modal
+        "--xc-wallet-button-hover-background": "#F0FDF4", // green-50
+        "--xc-wallet-button-hover-border-color": "#16A34A", // green-600
       },
-      "primary-wallet": "xaman",
     }
   );
 }
