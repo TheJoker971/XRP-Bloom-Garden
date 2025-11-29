@@ -2,16 +2,21 @@ import { Pack, Rarity, PackItem } from "./gameModels";
 
 // Items Nature
 const NATURE_ITEMS: PackItem[] = [
-  { id: "tree_small", name: "Jeune Arbre", rarity: Rarity.COMMON },
+  { id: "tree_small", name: "Jeune Arbre", rarity: Rarity.COMMON, imageUrl: "/images/pine.png" },
   { id: "bush", name: "Buisson", rarity: Rarity.COMMON },
   { id: "rock", name: "Rocher", rarity: Rarity.COMMON },
   { id: "flower", name: "Fleurs", rarity: Rarity.COMMON },
   { id: "tree_large", name: "Chêne Centenaire", rarity: Rarity.RARE },
-  { id: "beehive", name: "Ruche à Abeilles", rarity: Rarity.RARE },
+  {
+    id: "beehive",
+    name: "Ruche à Abeilles",
+    rarity: Rarity.RARE,
+    imageUrl: "/images/beehive.png",
+  },
   { id: "fountain", name: "Fontaine", rarity: Rarity.RARE },
   { id: "wind_turbine", name: "Éolienne", rarity: Rarity.EPIC },
   { id: "eco_sanctuary", name: "Sanctuaire Écologique", rarity: Rarity.EPIC },
-  { id: "world_tree", name: "Arbre-Monde", rarity: Rarity.LEGENDARY },
+  { id: "world_tree", name: "Arbre-Monde", rarity: Rarity.LEGENDARY, imageUrl: "/images/phoenix_tree.png" },
 ];
 
 // Packs
@@ -45,4 +50,3 @@ export const PACKS: Record<string, Pack> = {
     pool: NATURE_ITEMS,
   },
 };
-

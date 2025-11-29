@@ -20,10 +20,10 @@ export interface PackItem {
   name: string;
   rarity: Rarity;
   description?: string;
+  imageUrl?: string;
 }
 
 export interface DrawnItem extends PackItem {
   packId: string;
   packName: string;
 }
-
