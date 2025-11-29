@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { WalletProvider } from "@/components/providers/WalletProvider";
 import { WalletManagerInitializer } from "@/components/WalletManagerInitializer";
+import { XRPLWalletProvider } from "@/components/providers/XRPLWalletProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -29,10 +30,12 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <WalletProvider>
+      <WalletProvider>
+        <XRPLWalletProvider>
           <WalletManagerInitializer />
           {children}
-        </WalletProvider>
+        </XRPLWalletProvider>
+      </WalletProvider>
       </body>
     </html>
   );

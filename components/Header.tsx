@@ -1,21 +1,44 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { WalletConnector } from "./WalletConnector";
-import { useWallet } from "./providers/WalletProvider";
-
-interface StatusMessage {
-  message: string;
-  type: "success" | "error" | "warning" | "info";
-}
+import { useRouter } from "next/navigation";
+import { WalletButton } from "./WalletButton";
+import { useXRPLWallet } from "./providers/XRPLWalletProvider";
+import { LogOut, User, ChevronDown } from "lucide-react";
 
 export function Header() {
-  const { statusMessage, isConnected, accountInfo } = useWallet();
-  const message = statusMessage as StatusMessage | null;
+  const router = useRouter();
+  const { isConnected: isWalletConnected, walletInfo, balance } = useXRPLWallet();
+  const [user, setUser] = useState<any>(null);
+  const [showUserMenu, setShowUserMenu] = useState(false);
 
-  const formatAddress = (address: string) => {
-    if (!address) return "";
-    return `${address.slice(0, 6)}...${address.slice(-4)}`;
+  useEffect(() => {
+    fetchUser();
+  }, []);
+
+  const fetchUser = async () => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      try {
+        const res = await fetch('/api/auth/me', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+        if (data.user) {
+          setUser(data.user);
+        }
+      } catch {
+        localStorage.removeItem('token');
+      }
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    setUser(null);
+    setShowUserMenu(false);
+    router.push('/');
   };
 
   const formatBalance = (balance: string | number) => {
@@ -24,10 +47,29 @@ export function Header() {
     return num.toFixed(2);
   };
 
+  const getUserRoleLabel = (role: string) => {
+    switch (role) {
+      case 'ADMIN': return '👨‍💼 Admin';
+      case 'ASSOCIATION': return '🏢 Association';
+      case 'USER': return '👤 Utilisateur';
+      default: return '👤';
+    }
+  };
+
+  const getUserRoleColor = (role: string) => {
+    switch (role) {
+      case 'ADMIN': return 'bg-purple-100 text-purple-700 border-purple-200';
+      case 'ASSOCIATION': return 'bg-green-100 text-green-700 border-green-200';
+      case 'USER': return 'bg-sky-100 text-sky-700 border-sky-200';
+      default: return 'bg-gray-100 text-gray-700 border-gray-200';
+    }
+  };
+
   return (
     <header className="w-full border-b border-green-100 bg-gradient-to-r from-green-50 to-sky-50 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-20">
+          {/* Logo */}
           <Link href="/" className="flex items-center gap-3 group">
             <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-sky-500 rounded-lg flex items-center justify-center shadow-md group-hover:shadow-lg transition-shadow">
               <span className="text-white text-xl">🌸</span>
@@ -40,66 +82,117 @@ export function Header() {
             </div>
           </Link>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             {/* Navigation */}
-            <nav className="hidden md:flex items-center gap-6">
+            <nav className="hidden md:flex items-center gap-4">
               <Link
                 href="/"
-                className="text-gray-700 hover:text-green-600 font-medium transition-colors"
+                className="text-gray-700 hover:text-green-600 font-medium transition-colors text-sm"
               >
                 Accueil
               </Link>
               <Link
                 href="/draw"
-                className="text-gray-700 hover:text-green-600 font-medium transition-colors"
+                className="text-gray-700 hover:text-green-600 font-medium transition-colors text-sm"
               >
                 Tirage
               </Link>
               <Link
+                href="/event"
+                className="text-gray-700 hover:text-orange-600 font-medium transition-colors flex items-center gap-1 text-sm"
+              >
+                🔥 Événement
+              </Link>
+              <Link
                 href="/charte"
-                className="text-gray-700 hover:text-sky-600 font-medium transition-colors"
+                className="text-gray-700 hover:text-sky-600 font-medium transition-colors text-sm"
               >
                 Charte
               </Link>
             </nav>
 
-            {/* Wallet Info si connecté */}
-            {isConnected && accountInfo && (
-              <div className="hidden sm:flex items-center gap-3 px-4 py-2 bg-white rounded-lg border border-green-200 shadow-sm">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                  <span className="text-sm font-medium text-gray-700">
-                    {formatAddress(accountInfo.address || accountInfo.account || "")}
-                  </span>
-                </div>
-                {accountInfo.balance && (
-                  <div className="text-xs text-gray-500 border-l border-gray-200 pl-3">
-                    {formatBalance(accountInfo.balance)} XRP
+            {/* Séparateur */}
+            <div className="hidden md:block w-px h-8 bg-gray-300"></div>
+
+            {/* Section Compte Utilisateur */}
+            {user ? (
+              <div className="relative">
+                <button
+                  onClick={() => setShowUserMenu(!showUserMenu)}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-colors ${getUserRoleColor(user.role)} hover:shadow-md`}
+                >
+                  <User className="w-4 h-4" />
+                  <div className="hidden sm:flex flex-col items-start">
+                    <span className="text-xs font-medium">{user.name || user.email}</span>
+                    <span className="text-[10px] opacity-75">{getUserRoleLabel(user.role)}</span>
                   </div>
+                  <ChevronDown className="w-4 h-4" />
+                </button>
+
+                {showUserMenu && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-10"
+                      onClick={() => setShowUserMenu(false)}
+                    />
+                    <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 z-20 overflow-hidden">
+                      <div className="p-4 border-b border-gray-200 bg-gray-50">
+                        <p className="text-sm font-semibold text-gray-900">{user.name || 'Utilisateur'}</p>
+                        <p className="text-xs text-gray-600 mt-1">{user.email}</p>
+                        <p className="text-xs mt-2">
+                          <span className={`px-2 py-1 rounded ${getUserRoleColor(user.role)}`}>
+                            {getUserRoleLabel(user.role)}
+                          </span>
+                        </p>
+                      </div>
+
+                      {(user.role === 'ADMIN' || user.role === 'ASSOCIATION') && (
+                        <Link
+                          href={user.role === 'ADMIN' ? '/dashboard/admin' : '/dashboard/association'}
+                          onClick={() => setShowUserMenu(false)}
+                          className="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition"
+                        >
+                          📊 Dashboard
+                        </Link>
+                      )}
+
+                      <button
+                        onClick={handleLogout}
+                        className="w-full px-4 py-3 text-left text-sm text-red-600 hover:bg-red-50 transition flex items-center gap-2"
+                      >
+                        <LogOut className="w-4 h-4" />
+                        Déconnexion
+                      </button>
+                    </div>
+                  </>
                 )}
               </div>
-            )}
-
-            {/* Message de statut */}
-            {message && message.type && message.message && (
-              <div
-                className={`text-sm px-3 py-1.5 rounded-lg font-medium ${
-                  message.type === "success"
-                    ? "bg-green-100 text-green-700 border border-green-200"
-                    : message.type === "error"
-                    ? "bg-red-100 text-red-700 border border-red-200"
-                    : message.type === "warning"
-                    ? "bg-amber-100 text-amber-700 border border-amber-200"
-                    : "bg-sky-100 text-sky-700 border border-sky-200"
-                }`}
+            ) : (
+              <Link
+                href="/register"
+                className="px-4 py-2 text-sm bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition font-semibold shadow-sm"
               >
-                {message.message}
-              </div>
+                S'inscrire
+              </Link>
             )}
 
-            {/* Wallet Connector */}
-            <div className="flex items-center">
-              <WalletConnector />
+            {/* Séparateur */}
+            <div className="hidden md:block w-px h-8 bg-gray-300"></div>
+
+            {/* Section Wallet XRPL */}
+            <div className="flex items-center gap-2">
+              {isWalletConnected && walletInfo && balance && (
+                <div className="hidden lg:flex items-center gap-2 px-3 py-2 bg-white rounded-lg border border-green-200 shadow-sm">
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                  <div className="flex flex-col">
+                    <span className="text-xs text-gray-500">Wallet XRPL</span>
+                    <span className="text-sm font-semibold text-green-600">
+                      {formatBalance(balance)} XRP
+                    </span>
+                  </div>
+                </div>
+              )}
+              <WalletButton />
             </div>
           </div>
         </div>
