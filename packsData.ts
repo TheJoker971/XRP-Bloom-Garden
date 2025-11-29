@@ -2,16 +2,9 @@ import { Pack, Rarity, PackItem } from "../XRP-Bloom-Garden/gameModels";
 
 // Items Nature
 const NATURE_ITEMS: PackItem[] = [
-  { id: "tree_small", name: "Jeune Arbre", rarity: Rarity.COMMON },
-  { id: "bush", name: "Buisson", rarity: Rarity.COMMON },
-  { id: "rock", name: "Rocher", rarity: Rarity.COMMON },
-  { id: "flower", name: "Fleurs", rarity: Rarity.COMMON },
-  { id: "tree_large", name: "Chêne Centenaire", rarity: Rarity.RARE },
-  { id: "beehive", name: "Ruche à Abeilles", rarity: Rarity.RARE },
-  { id: "fountain", name: "Fontaine", rarity: Rarity.RARE },
-  { id: "wind_turbine", name: "Éolienne", rarity: Rarity.EPIC },
-  { id: "eco_sanctuary", name: "Sanctuaire Écologique", rarity: Rarity.EPIC },
-  { id: "world_tree", name: "Arbre-Monde", rarity: Rarity.LEGENDARY },
+  { id: "tree_small", name: "Jeune pin", rarity: Rarity.COMMON }, //https://drive.google.com/uc?export=view&id=1TnuABq5qfE1A3GagWle48pzOKBJzaEWn
+  { id: "beehive", name: "Ruche à Abeilles", rarity: Rarity.RARE }, //https://drive.google.com/uc?export=view&id=1cwPn0KbJlglF3zpg5UfGCzvN5ghee1WF
+  { id: "world_tree", name: "Phoenix tree", rarity: Rarity.LEGENDARY }, //https://drive.google.com/uc?export=view&id=1SLO_F4FsSN56Kl89flQEoNgVeAeZhN8L
 ];
 
 // Packs
