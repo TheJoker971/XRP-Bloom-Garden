@@ -45,3 +45,19 @@ xrpl-wallet-connector {
 /* Note: Les erreurs MetaMask sont normales et n'affectent pas XRPL
    MetaMask essaie d'injecter un provider Ethereum, mais nous utilisons XRPL
    qui est une blockchain différente. Ces erreurs peuvent être ignorées. */
+
+/* Animation pour les notifications */
+@keyframes slide-in-right {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.5s ease-out;
+}

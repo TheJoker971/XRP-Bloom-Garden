@@ -34,24 +34,8 @@ export default function Home() {
         </div>
 
         {/* Features Grid */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
+        <div className="grid md:grid-cols-2 gap-8 mb-16">
           {/* Feature 1 */}
-          <div className="bg-white rounded-xl shadow-lg p-8 border border-green-100 hover:shadow-xl transition-shadow">
-            <div className="w-14 h-14 bg-green-100 rounded-lg flex items-center justify-center mb-6">
-              <span className="text-3xl">🌱</span>
-            </div>
-            <h3 className="text-2xl font-semibold text-gray-800 mb-3">
-              Créer un Garden NFT
-            </h3>
-            <p className="text-gray-600 mb-6 leading-relaxed">
-              Créez une collection NFT unique pour votre association. Chaque NFT représente un don et contribue à votre cause.
-            </p>
-            <button className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors">
-              Créer maintenant
-            </button>
-          </div>
-
-          {/* Feature 2 */}
           <div className="bg-gradient-to-br from-green-50 to-sky-50 rounded-xl shadow-lg p-8 border border-sky-100 hover:shadow-xl transition-shadow">
             <div className="w-14 h-14 bg-sky-100 rounded-lg flex items-center justify-center mb-6">
               <span className="text-3xl">💧</span>
@@ -60,14 +44,14 @@ export default function Home() {
               Faire un don
             </h3>
             <p className="text-gray-600 mb-6 leading-relaxed">
-              Faites un don à une association et recevez un NFT unique en retour. Chaque don contribue à un avenir meilleur.
+              Faites un don à une association et recevez des objets pour décorer votre village. Chaque don contribue à un avenir meilleur.
             </p>
-            <button className="w-full bg-sky-600 hover:bg-sky-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors">
+            <Link href="/donate" className="block w-full bg-sky-600 hover:bg-sky-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors text-center">
               Faire un don
-            </button>
+            </Link>
           </div>
 
-          {/* Feature 3 */}
+          {/* Feature 2 */}
           <div className="bg-white rounded-xl shadow-lg p-8 border border-amber-100 hover:shadow-xl transition-shadow">
             <div className="w-14 h-14 bg-amber-100 rounded-lg flex items-center justify-center mb-6">
               <span className="text-3xl">🌍</span>
@@ -78,9 +62,9 @@ export default function Home() {
             <p className="text-gray-600 mb-6 leading-relaxed">
               Suivez l'impact de vos dons en temps réel. Chaque contribution est transparente et traçable sur la blockchain.
             </p>
-            <button className="w-full border-2 border-green-600 text-green-600 hover:bg-green-50 font-semibold py-3 px-6 rounded-lg transition-colors">
+            <Link href="/events" className="block w-full border-2 border-green-600 text-green-600 hover:bg-green-50 font-semibold py-3 px-6 rounded-lg transition-colors text-center">
               Découvrir
-            </button>
+            </Link>
           </div>
         </div>
 
@@ -107,12 +91,11 @@ export default function Home() {
           <h2 className="text-4xl font-bold text-green-800 text-center mb-12">
             Comment ça fonctionne ?
           </h2>
-          <div className="grid md:grid-cols-4 gap-6">
+          <div className="grid md:grid-cols-3 gap-6">
             {[
-              { icon: '1️⃣', title: 'Créer', desc: 'Créez votre collection NFT' },
-              { icon: '2️⃣', title: 'Partager', desc: 'Partagez votre cause' },
-              { icon: '3️⃣', title: 'Recevoir', desc: 'Recevez des dons en XRP' },
-              { icon: '4️⃣', title: 'Impact', desc: 'Suivez votre impact' },
+              { icon: '1️⃣', title: 'Faire un don', desc: 'Choisissez une association et faites un don en XRP' },
+              { icon: '2️⃣', title: 'Gagner des objets', desc: 'Recevez des objets pour décorer votre village' },
+              { icon: '3️⃣', title: 'Créer votre village', desc: 'Décorez votre village avec vos objets gagnés' },
             ].map((step, idx) => (
               <div key={idx} className="bg-white rounded-xl shadow-lg p-6 border border-green-100 text-center">
                 <div className="text-4xl mb-4">{step.icon}</div>
@@ -132,14 +115,17 @@ export default function Home() {
             Rejoignez notre communauté et contribuez à un avenir plus durable et solidaire.
           </p>
           <div className="flex flex-wrap justify-center gap-4">
-            <button className="px-8 py-4 bg-gradient-to-r from-green-500 to-sky-500 text-white font-semibold rounded-lg shadow-md hover:shadow-lg transition-all">
-              Commencer maintenant
-            </button>
             <Link 
-              href="/charte" 
-              className="px-8 py-4 border-2 border-green-600 text-green-600 hover:bg-green-50 font-semibold rounded-lg transition-all"
+              href="/donate" 
+              className="px-8 py-4 bg-gradient-to-r from-green-500 to-sky-500 text-white font-semibold rounded-lg shadow-md hover:shadow-lg transition-all"
             >
-              Voir la charte
+              💝 Faire un don
+            </Link>
+            <Link 
+              href="/events" 
+              className="px-8 py-4 border-2 border-orange-600 text-orange-600 hover:bg-orange-50 font-semibold rounded-lg transition-all"
+            >
+              🔥 Voir les événements
             </Link>
           </div>
         </section>
