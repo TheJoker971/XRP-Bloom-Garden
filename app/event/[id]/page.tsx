@@ -26,8 +26,7 @@ interface EventData {
   }>;
 }
 
-export default function EventPage({ params }: { params?: { id?: string } }) {
-  const eventId = params?.id;
+export default function EventDetailPage({ params }: { params: { id: string } }) {
   const { isConnected, walletInfo } = useXRPLWallet();
   const [eventData, setEventData] = useState<EventData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -41,14 +40,13 @@ export default function EventPage({ params }: { params?: { id?: string } }) {
 
   useEffect(() => {
     fetchEventData();
-    const interval = setInterval(fetchEventData, 5000); // Refresh toutes les 5 secondes
+    const interval = setInterval(fetchEventData, 5000);
     return () => clearInterval(interval);
-  }, []);
+  }, [params.id]);
 
   const fetchEventData = async () => {
     try {
-      const url = eventId ? `/api/events/${eventId}` : '/api/events/current';
-      const response = await fetch(url);
+      const response = await fetch(`/api/events/${params.id}`);
       const data = await response.json();
       setEventData(data);
     } catch (error) {
@@ -69,21 +67,18 @@ export default function EventPage({ params }: { params?: { id?: string } }) {
 
     try {
       const amount = packType === 'basic' ? 5 : 20;
-      const associationAddress = 'rN7n7otQDd6FczFgLdSqtcsAUxDkw6fzRH'; // Adresse de GreenShield
+      const associationAddress = 'rN7n7otQDd6FczFgLdSqtcsAUxDkw6fzRH';
 
-      // Créer la transaction XRPL
       const client = new Client('wss://s.altnet.rippletest.net:51233');
       await client.connect();
 
-      // Note: Dans une vraie implémentation, vous devriez signer avec le wallet
-      // Pour la démo, on simule juste la transaction
       const txHash = `demo_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-      // Enregistrer la contribution
       const response = await fetch('/api/events/contribute', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          eventId: params.id,
           walletAddress: walletInfo.address,
           packType,
           amount,
@@ -100,7 +95,6 @@ export default function EventPage({ params }: { params?: { id?: string } }) {
       setLastDamage(data.damage);
       setDamageHistory(prev => [...prev, { damage: data.damage, timestamp: Date.now() }]);
       
-      // Notification de succès avec impact réel
       const impactMessages = {
         basic: [
           `Votre don vient d'éteindre ${data.damage * 5} m² du brasier !`,
@@ -119,7 +113,6 @@ export default function EventPage({ params }: { params?: { id?: string } }) {
       setNotification(randomMessage);
       setTimeout(() => setNotification(null), 6000);
 
-      // Si l'événement est terminé
       if (data.eventCompleted) {
         if (data.isWinner) {
           setWinnerAddress(walletInfo.address);
@@ -127,9 +120,7 @@ export default function EventPage({ params }: { params?: { id?: string } }) {
         setTimeout(() => setShowVictory(true), 1500);
       }
 
-      // Rafraîchir les données
       await fetchEventData();
-
       await client.disconnect();
     } catch (error: any) {
       console.error('Erreur:', error);
@@ -155,8 +146,14 @@ export default function EventPage({ params }: { params?: { id?: string } }) {
       <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-sky-50">
         <Header />
         <div className="max-w-4xl mx-auto px-4 py-12 text-center">
-          <h1 className="text-4xl font-bold text-gray-800 mb-4">Aucun événement actif</h1>
-          <p className="text-gray-600">Revenez plus tard pour participer aux événements !</p>
+          <h1 className="text-4xl font-bold text-gray-800 mb-4">Événement introuvable</h1>
+          <p className="text-gray-600 mb-8">Cet événement n'existe pas ou a été supprimé.</p>
+          <a
+            href="/events"
+            className="inline-block px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg font-bold hover:from-green-700 hover:to-emerald-700 transition"
+          >
+            Voir tous les événements
+          </a>
         </div>
       </div>
     );
@@ -174,13 +171,11 @@ export default function EventPage({ params }: { params?: { id?: string } }) {
     }`}>
       <Header />
 
-      {/* Overlay de crise */}
       {isCrisis && (
         <div className="fixed inset-0 bg-gradient-to-b from-orange-500/20 to-red-500/20 pointer-events-none z-0 animate-pulse" />
       )}
 
       <div className="relative z-10 max-w-7xl mx-auto px-4 py-8">
-        {/* Notification flottante */}
         {notification && (
           <div className="fixed top-24 right-4 z-50 animate-slide-in-right">
             <div className="bg-gradient-to-r from-green-500 to-emerald-500 text-white px-6 py-4 rounded-lg shadow-2xl border-2 border-white">
@@ -195,7 +190,6 @@ export default function EventPage({ params }: { params?: { id?: string } }) {
           </div>
         )}
 
-        {/* En-tête de l'événement */}
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-3 mb-4">
             <Flame className="w-12 h-12 text-orange-600 animate-bounce" />
@@ -217,7 +211,6 @@ export default function EventPage({ params }: { params?: { id?: string } }) {
           )}
         </div>
 
-        {/* Barre de vie de l'incendie */}
         <div className="mb-8 bg-white rounded-xl shadow-lg p-6 border-4 border-orange-300">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
@@ -242,7 +235,6 @@ export default function EventPage({ params }: { params?: { id?: string } }) {
             </div>
           </div>
 
-          {/* Historique des derniers dégâts */}
           {damageHistory.length > 0 && (
             <div className="mt-4 flex flex-wrap justify-center gap-2">
               {damageHistory.slice(-5).reverse().map((item, index) => (
@@ -260,11 +252,9 @@ export default function EventPage({ params }: { params?: { id?: string } }) {
         </div>
 
         <div className="grid lg:grid-cols-3 gap-6">
-          {/* Packs d'action */}
           <div className="lg:col-span-2 space-y-4">
             <h2 className="text-3xl font-bold text-gray-800 mb-4">Combattez l'Incendie !</h2>
             
-            {/* Pack Basic */}
             <div className="bg-white rounded-xl shadow-lg p-6 border-2 border-blue-200 hover:border-blue-400 transition">
               <div className="flex items-start justify-between mb-4">
                 <div>
@@ -305,7 +295,6 @@ export default function EventPage({ params }: { params?: { id?: string } }) {
               </button>
             </div>
 
-            {/* Pack Premium */}
             <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl shadow-lg p-6 border-4 border-purple-300 hover:border-purple-500 transition relative overflow-hidden">
               <div className="absolute top-2 right-2">
                 <span className="px-3 py-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs font-bold rounded-full">
@@ -353,7 +342,6 @@ export default function EventPage({ params }: { params?: { id?: string } }) {
             </div>
           </div>
 
-          {/* Leaderboard */}
           <div className="bg-white rounded-xl shadow-lg p-6">
             <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2">
               <Trophy className="w-6 h-6 text-yellow-500" />
@@ -409,7 +397,6 @@ export default function EventPage({ params }: { params?: { id?: string } }) {
         </div>
       </div>
 
-      {/* Pop-up de Crise */}
       {showCrisisPopup && isCrisis && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
           <div className="bg-gradient-to-br from-orange-50 to-red-50 rounded-2xl p-8 max-w-2xl w-full border-4 border-orange-500 shadow-2xl animate-pulse-slow">
@@ -455,7 +442,6 @@ export default function EventPage({ params }: { params?: { id?: string } }) {
         </div>
       )}
 
-      {/* Modal de victoire */}
       {showVictory && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
           <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-8 max-w-2xl w-full border-4 border-green-500 shadow-2xl">
@@ -492,7 +478,6 @@ export default function EventPage({ params }: { params?: { id?: string } }) {
                 </div>
               </div>
 
-              {/* Héros NFT Ignis */}
               <div className="bg-gradient-to-br from-orange-100 to-red-100 rounded-xl p-6 mb-6 border-4 border-orange-400">
                 <div className="text-6xl mb-3">🔥</div>
                 <h3 className="text-3xl font-bold text-gray-800 mb-2">Ignis</h3>

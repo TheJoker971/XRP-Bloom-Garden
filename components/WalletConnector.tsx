@@ -69,7 +69,7 @@ export function WalletConnector() {
           // Vérifier que l'élément est bien défini
           if (element && element.shadowRoot) {
             console.log("✅ Shadow DOM disponible");
-          }
+  }
         }
       }, 300);
       
@@ -78,7 +78,7 @@ export function WalletConnector() {
   }, [isClient, isRegistered]);
 
   if (!isClient || !isRegistered) {
-    return (
+  return (
       <div className="px-4 py-2 bg-gray-100 text-gray-600 rounded-lg text-sm">
         Chargement...
       </div>

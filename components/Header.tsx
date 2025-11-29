@@ -98,16 +98,22 @@ export function Header() {
                 Tirage
               </Link>
               <Link
-                href="/event"
+                href="/events"
                 className="text-gray-700 hover:text-orange-600 font-medium transition-colors flex items-center gap-1 text-sm"
               >
-                🔥 Événement
+                🔥 Événements
               </Link>
               <Link
                 href="/charte"
                 className="text-gray-700 hover:text-sky-600 font-medium transition-colors text-sm"
               >
                 Charte
+              </Link>
+              <Link
+                href="/partnership"
+                className="px-3 py-1.5 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg font-semibold transition hover:from-purple-700 hover:to-pink-700 text-sm shadow-sm"
+              >
+                🤝 Partenaires
               </Link>
             </nav>
 

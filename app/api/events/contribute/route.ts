@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { walletAddress, packType, amount, txHash } = body;
+    const { eventId, walletAddress, packType, amount, txHash } = body;
 
     if (!walletAddress || !packType || !amount) {
       return NextResponse.json(
@@ -13,10 +13,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Récupérer l'événement actif
-    const event = await prisma.event.findFirst({
-      where: { status: 'active' },
-    });
+    // Récupérer l'événement (par ID ou le premier actif)
+    const event = eventId 
+      ? await prisma.event.findUnique({ where: { id: eventId } })
+      : await prisma.event.findFirst({ where: { status: 'active' } });
 
     if (!event) {
       return NextResponse.json(
@@ -68,57 +68,72 @@ export async function POST(request: NextRequest) {
     });
 
     // Si l'événement est terminé, distribuer les récompenses
-    let winner = null;
+    let winner = false;
     if (newHealth <= 0) {
-      // Trouver le top 3
-      const topContributors = await prisma.$queryRaw<Array<{ walletAddress: string; totalTickets: bigint }>>`
-        SELECT 
-          walletAddress,
-          SUM(tickets) as totalTickets
-        FROM event_contributions
-        WHERE eventId = ${event.id}
-        GROUP BY walletAddress
-        ORDER BY totalTickets DESC
-        LIMIT 3
-      `;
-
-      // Créer le héros Ignis s'il n'existe pas
-      let hero = await prisma.hero.findFirst({
-        where: { name: 'Ignis, le Soldat du Feu' },
-      });
-
-      if (!hero) {
-        hero = await prisma.hero.create({
-          data: {
-            name: 'Ignis, le Soldat du Feu',
-            description: 'Héros légendaire qui a combattu le Brasier des Cimes',
-            imageUrl: '/heroes/ignis.png',
-            rarity: 'legendary',
-            eventId: event.id,
-          },
-        });
-      }
-
-      // Attribuer le héros aux top 3
-      for (const contributor of topContributors) {
-        const existing = await prisma.heroOwnership.findFirst({
-          where: {
-            heroId: hero.id,
-            walletAddress: contributor.walletAddress,
+      try {
+        // Récupérer toutes les contributions pour cet événement
+        const allContributions = await prisma.eventContribution.findMany({
+          where: { eventId: event.id },
+          select: {
+            walletAddress: true,
+            tickets: true,
           },
         });
 
-        if (!existing) {
-          await prisma.heroOwnership.create({
+        // Calculer les totaux par wallet
+        const contributorMap = new Map<string, number>();
+        allContributions.forEach(contrib => {
+          const current = contributorMap.get(contrib.walletAddress) || 0;
+          contributorMap.set(contrib.walletAddress, current + contrib.tickets);
+        });
+
+        // Trier et prendre le top 3
+        const topContributors = Array.from(contributorMap.entries())
+          .map(([walletAddress, totalTickets]) => ({ walletAddress, totalTickets }))
+          .sort((a, b) => b.totalTickets - a.totalTickets)
+          .slice(0, 3);
+
+        // Créer le héros Ignis s'il n'existe pas
+        let hero = await prisma.hero.findFirst({
+          where: { name: 'Ignis, le Soldat du Feu' },
+        });
+
+        if (!hero) {
+          hero = await prisma.hero.create({
             data: {
+              name: 'Ignis, le Soldat du Feu',
+              description: 'Héros légendaire qui a combattu le Brasier des Cimes',
+              imageUrl: '/heroes/ignis.png',
+              rarity: 'legendary',
+              eventId: event.id,
+            },
+          });
+        }
+
+        // Attribuer le héros aux top 3
+        for (const contributor of topContributors) {
+          const existing = await prisma.heroOwnership.findFirst({
+            where: {
               heroId: hero.id,
               walletAddress: contributor.walletAddress,
             },
           });
-        }
-      }
 
-      winner = topContributors[0]?.walletAddress === walletAddress;
+          if (!existing) {
+            await prisma.heroOwnership.create({
+              data: {
+                heroId: hero.id,
+                walletAddress: contributor.walletAddress,
+              },
+            });
+          }
+        }
+
+        winner = topContributors.length > 0 && topContributors[0].walletAddress === walletAddress;
+      } catch (heroError) {
+        console.error('Erreur lors de la distribution des héros:', heroError);
+        // Continue même si la distribution des héros échoue
+      }
     }
 
     return NextResponse.json({

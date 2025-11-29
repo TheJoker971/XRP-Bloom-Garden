@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Header } from '@/components/Header';
-import { Save, Building2, MapPin, Phone, Globe, Wallet, Send, Image, TrendingUp } from 'lucide-react';
+import { Save, Building2, MapPin, Phone, Globe, Wallet, Send, Image, TrendingUp, Flame, Calendar, Zap, Trophy, Plus } from 'lucide-react';
 import { useXRPLWallet } from '@/components/providers/XRPLWalletProvider';
 
 export default function AssociationDashboard() {
@@ -23,15 +23,28 @@ export default function AssociationDashboard() {
     walletAddress: '',
   });
   
-  const [activeTab, setActiveTab] = useState<'info' | 'wallet' | 'nfts'>('info');
+  const [activeTab, setActiveTab] = useState<'info' | 'wallet' | 'nfts' | 'events'>('info');
   const [transferData, setTransferData] = useState({ to: '', amount: '' });
   const [transferring, setTransferring] = useState(false);
   const [nfts, setNfts] = useState<any[]>([]);
   const [loadingNFTs, setLoadingNFTs] = useState(false);
   const { walletInfo, balance, refreshBalance } = useXRPLWallet();
+  
+  // États pour les événements
+  const [events, setEvents] = useState<any[]>([]);
+  const [loadingEvents, setLoadingEvents] = useState(false);
+  const [creatingEvent, setCreatingEvent] = useState(false);
+  const [eventFormData, setEventFormData] = useState({
+    name: '',
+    description: '',
+    maxHealth: '1000',
+    multiplier: '2',
+    durationDays: '7',
+  });
 
   useEffect(() => {
     fetchProfile();
+    fetchEvents();
   }, []);
 
   const fetchProfile = async () => {
@@ -168,6 +181,57 @@ export default function AssociationDashboard() {
     }
   }, [walletInfo, activeTab]);
 
+  const fetchEvents = async () => {
+    setLoadingEvents(true);
+    try {
+      const response = await fetch('/api/events/list');
+      const data = await response.json();
+      setEvents(data.events || []);
+    } catch (error) {
+      console.error('Erreur lors du chargement des événements:', error);
+    } finally {
+      setLoadingEvents(false);
+    }
+  };
+
+  const handleCreateEvent = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCreatingEvent(true);
+    setMessage(null);
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/events/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(eventFormData),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Erreur lors de la création');
+      }
+
+      setMessage({ type: 'success', text: 'Événement créé avec succès !' });
+      setEventFormData({
+        name: '',
+        description: '',
+        maxHealth: '1000',
+        multiplier: '2',
+        durationDays: '7',
+      });
+      await fetchEvents();
+    } catch (error: any) {
+      setMessage({ type: 'error', text: error.message });
+    } finally {
+      setCreatingEvent(false);
+    }
+  };
+
   const getTypeIcon = (type: string) => {
     switch (type) {
       case 'nature': return '🌿';
@@ -253,6 +317,17 @@ export default function AssociationDashboard() {
               >
                 <Image className="w-4 h-4 inline mr-2" />
                 Mes NFTs
+              </button>
+              <button
+                onClick={() => setActiveTab('events')}
+                className={`px-6 py-4 font-medium transition-colors border-b-2 ${
+                  activeTab === 'events'
+                    ? 'border-green-600 text-green-600'
+                    : 'border-transparent text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <Flame className="w-4 h-4 inline mr-2" />
+                Événements
               </button>
             </div>
           </div>
@@ -486,6 +561,225 @@ export default function AssociationDashboard() {
                     </p>
                   </form>
                 )}
+              </div>
+            )}
+
+            {activeTab === 'events' && (
+              <div className="space-y-6">
+                {/* Formulaire de création d'événement */}
+                <div className="bg-gradient-to-br from-orange-50 to-red-50 rounded-xl shadow-lg p-6 border-2 border-orange-300">
+                  <h3 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                    <Plus className="w-6 h-6 text-orange-600" />
+                    Créer un Événement
+                  </h3>
+                  
+                  <div className="bg-blue-50 p-4 rounded-lg border border-blue-200 mb-6">
+                    <p className="text-sm text-blue-800">
+                      <strong>ℹ️ Important :</strong> Un seul événement peut être actif à la fois. Assurez-vous qu'aucun autre événement n'est en cours avant de créer le vôtre.
+                    </p>
+                  </div>
+
+                  <form onSubmit={handleCreateEvent} className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Nom de l'événement *
+                      </label>
+                      <input
+                        type="text"
+                        value={eventFormData.name}
+                        onChange={(e) => setEventFormData({ ...eventFormData, name: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                        placeholder="Le Brasier des Cimes"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Description
+                      </label>
+                      <textarea
+                        value={eventFormData.description}
+                        onChange={(e) => setEventFormData({ ...eventFormData, description: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                        rows={3}
+                        placeholder="Un incendie menace la forêt..."
+                      />
+                    </div>
+
+                    <div className="grid md:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Points de vie (HP) *
+                        </label>
+                        <input
+                          type="number"
+                          value={eventFormData.maxHealth}
+                          onChange={(e) => setEventFormData({ ...eventFormData, maxHealth: e.target.value })}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                          min="100"
+                          max="10000"
+                          required
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Multiplicateur *
+                        </label>
+                        <select
+                          value={eventFormData.multiplier}
+                          onChange={(e) => setEventFormData({ ...eventFormData, multiplier: e.target.value })}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                        >
+                          <option value="1">x1 (Normal)</option>
+                          <option value="1.5">x1.5</option>
+                          <option value="2">x2 (Recommandé)</option>
+                          <option value="3">x3 (Intense)</option>
+                          <option value="5">x5 (Extrême)</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Durée (jours) *
+                        </label>
+                        <input
+                          type="number"
+                          value={eventFormData.durationDays}
+                          onChange={(e) => setEventFormData({ ...eventFormData, durationDays: e.target.value })}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                          min="1"
+                          max="30"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={creatingEvent}
+                      className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-lg hover:from-orange-700 hover:to-red-700 transition disabled:opacity-50 font-bold"
+                    >
+                      <Flame className="w-5 h-5" />
+                      {creatingEvent ? 'Création en cours...' : 'Créer l\'événement'}
+                    </button>
+                  </form>
+                </div>
+
+                {/* Liste des événements */}
+                <div className="bg-white rounded-xl shadow-lg p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                      <Trophy className="w-6 h-6 text-yellow-500" />
+                      Événements ({events.length})
+                    </h3>
+                    <button
+                      onClick={fetchEvents}
+                      disabled={loadingEvents}
+                      className="px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition disabled:opacity-50"
+                    >
+                      {loadingEvents ? 'Chargement...' : 'Actualiser'}
+                    </button>
+                  </div>
+
+                  {loadingEvents ? (
+                    <div className="text-center py-8">
+                      <p className="text-gray-600">Chargement des événements...</p>
+                    </div>
+                  ) : events.length === 0 ? (
+                    <div className="text-center py-12 bg-gray-50 rounded-lg">
+                      <Flame className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                      <p className="text-gray-600">Aucun événement pour le moment</p>
+                      <p className="text-sm text-gray-500 mt-2">Créez votre premier événement ci-dessus !</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {events.map((event) => (
+                        <div
+                          key={event.id}
+                          className={`p-4 rounded-lg border-2 ${
+                            event.status === 'active'
+                              ? 'bg-orange-50 border-orange-300'
+                              : event.status === 'completed'
+                              ? 'bg-green-50 border-green-300'
+                              : 'bg-gray-50 border-gray-300'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="flex-1">
+                              <h4 className="text-lg font-bold text-gray-900">{event.name}</h4>
+                              <p className="text-sm text-gray-600 mt-1">{event.description}</p>
+                            </div>
+                            <span
+                              className={`px-3 py-1 rounded-full text-xs font-bold ${
+                                event.status === 'active'
+                                  ? 'bg-orange-500 text-white'
+                                  : event.status === 'completed'
+                                  ? 'bg-green-500 text-white'
+                                  : 'bg-gray-500 text-white'
+                              }`}
+                            >
+                              {event.status === 'active' ? '🔥 Actif' : event.status === 'completed' ? '✅ Terminé' : '⏸️ Inactif'}
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+                            <div className="bg-white p-2 rounded text-center">
+                              <div className="text-xs text-gray-600">HP Restants</div>
+                              <div className="text-lg font-bold text-orange-600">
+                                {event.currentHealth}/{event.maxHealth}
+                              </div>
+                            </div>
+                            <div className="bg-white p-2 rounded text-center">
+                              <div className="text-xs text-gray-600">Multiplicateur</div>
+                              <div className="text-lg font-bold text-purple-600">x{event.multiplier}</div>
+                            </div>
+                            <div className="bg-white p-2 rounded text-center">
+                              <div className="text-xs text-gray-600">Contributions</div>
+                              <div className="text-lg font-bold text-blue-600">{event.totalContributions || 0}</div>
+                            </div>
+                            <div className="bg-white p-2 rounded text-center">
+                              <div className="text-xs text-gray-600">XRP Collectés</div>
+                              <div className="text-lg font-bold text-green-600">{event.totalAmount?.toFixed(0) || 0}</div>
+                            </div>
+                          </div>
+
+                          <div className="relative w-full h-3 bg-gray-200 rounded-full overflow-hidden mb-3">
+                            <div
+                              className="absolute inset-y-0 left-0 bg-gradient-to-r from-orange-500 to-red-500 transition-all"
+                              style={{ width: `${event.healthPercentage}%` }}
+                            />
+                          </div>
+
+                          {event.endDate && (
+                            <div className="flex items-center gap-2 text-xs text-gray-600">
+                              <Calendar className="w-3 h-3" />
+                              <span>
+                                Fin prévue : {new Date(event.endDate).toLocaleDateString('fr-FR', {
+                                  day: 'numeric',
+                                  month: 'long',
+                                  year: 'numeric',
+                                })}
+                              </span>
+                            </div>
+                          )}
+
+                          {event.status === 'active' && (
+                            <a
+                              href={`/event/${event.id}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="mt-3 block w-full text-center px-4 py-2 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-lg hover:from-orange-700 hover:to-red-700 transition font-semibold text-sm"
+                            >
+                              Voir l'événement →
+                            </a>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
