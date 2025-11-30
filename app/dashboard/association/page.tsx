@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Header } from '@/components/Header';
-import { Save, Building2, MapPin, Phone, Globe, Wallet, Send, Image, TrendingUp, Flame, Plus } from 'lucide-react';
+import { Save, Building2, MapPin, Phone, Globe, Wallet, Send, TrendingUp, Flame, Plus } from 'lucide-react';
 import { useXRPLWallet } from '@/components/providers/XRPLWalletProvider';
 
 export default function AssociationDashboard() {
@@ -23,11 +23,9 @@ export default function AssociationDashboard() {
     walletAddress: '',
   });
   
-  const [activeTab, setActiveTab] = useState<'info' | 'wallet' | 'nfts' | 'events'>('info');
+  const [activeTab, setActiveTab] = useState<'info' | 'wallet' | 'events'>('info');
   const [transferData, setTransferData] = useState({ to: '', amount: '' });
   const [transferring, setTransferring] = useState(false);
-  const [nfts, setNfts] = useState<any[]>([]);
-  const [loadingNFTs, setLoadingNFTs] = useState(false);
   const { walletInfo, balance, refreshBalance } = useXRPLWallet();
   const [eventForm, setEventForm] = useState({
     name: '',
@@ -77,11 +75,6 @@ export default function AssociationDashboard() {
           walletAddress: data.user.association.walletAddress || '',
         });
         setAssociation(data.user.association);
-        
-        // Charger les NFTs si un wallet est connecté
-        if (walletInfo?.address) {
-          fetchNFTs(walletInfo.address);
-        }
       }
     } catch (error) {
       console.error('Erreur:', error);
@@ -122,19 +115,6 @@ export default function AssociationDashboard() {
     }
   };
 
-  const fetchNFTs = async (address: string) => {
-    setLoadingNFTs(true);
-    try {
-      const response = await fetch(`/api/xrpl/nfts?address=${address}`);
-      const data = await response.json();
-      setNfts(data.nfts || []);
-    } catch (error) {
-      console.error('Erreur lors du chargement des NFTs:', error);
-    } finally {
-      setLoadingNFTs(false);
-    }
-  };
-
   const handleTransfer = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!walletInfo?.address) {
@@ -171,12 +151,6 @@ export default function AssociationDashboard() {
       setTransferring(false);
     }
   };
-
-  useEffect(() => {
-    if (walletInfo?.address && activeTab === 'nfts') {
-      fetchNFTs(walletInfo.address);
-    }
-  }, [walletInfo, activeTab]);
 
   const getTypeIcon = (type: string) => {
     switch (type) {
@@ -306,17 +280,6 @@ export default function AssociationDashboard() {
               >
                 <Send className="w-4 h-4 inline mr-2" />
                 Wallet XRP
-              </button>
-              <button
-                onClick={() => setActiveTab('nfts')}
-                className={`px-6 py-4 font-medium transition-colors border-b-2 ${
-                  activeTab === 'nfts'
-                    ? 'border-green-600 text-green-600'
-                    : 'border-transparent text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                <Image className="w-4 h-4 inline mr-2" />
-                Mes NFTs
               </button>
               <button
                 onClick={() => setActiveTab('events')}
@@ -464,10 +427,13 @@ export default function AssociationDashboard() {
                     <input
                       type="text"
                       value={formData.walletAddress}
-                      onChange={(e) => setFormData({ ...formData, walletAddress: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                      disabled
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-600 cursor-not-allowed"
                       placeholder="rXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
                     />
+                    <p className="text-xs text-gray-500 mt-1">
+                      🔒 Contactez un administrateur pour modifier votre adresse wallet
+                    </p>
                   </div>
                 </div>
 
@@ -560,70 +526,6 @@ export default function AssociationDashboard() {
                       Note: Cette fonctionnalité est en mode démo. En production, la signature se ferait via votre wallet.
                     </p>
                   </form>
-                )}
-              </div>
-            )}
-
-            {activeTab === 'nfts' && (
-              <div className="space-y-6">
-                {walletInfo ? (
-                  <>
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                        <Image className="w-5 h-5 text-green-600" />
-                        Mes NFTs ({nfts.length})
-                      </h3>
-                      <button
-                        onClick={() => fetchNFTs(walletInfo.address)}
-                        disabled={loadingNFTs}
-                        className="px-4 py-2 text-sm bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition disabled:opacity-50"
-                      >
-                        {loadingNFTs ? 'Chargement...' : 'Actualiser'}
-                      </button>
-                    </div>
-
-                    {loadingNFTs ? (
-                      <div className="text-center py-12">
-                        <p className="text-gray-600">Chargement des NFTs...</p>
-                      </div>
-                    ) : nfts.length === 0 ? (
-                      <div className="bg-gray-50 p-12 rounded-lg text-center">
-                        <Image className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                        <p className="text-gray-600">Aucun NFT trouvé</p>
-                        <p className="text-sm text-gray-500 mt-2">
-                          Vos NFTs apparaîtront ici une fois que vous en aurez reçu.
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {nfts.map((nft, index) => (
-                          <div
-                            key={index}
-                            className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-lg transition"
-                          >
-                            <div className="aspect-square bg-gradient-to-br from-green-100 to-emerald-100 rounded-lg mb-3 flex items-center justify-center">
-                              <Image className="w-12 h-12 text-green-600" />
-                            </div>
-                            <p className="font-medium text-gray-900 mb-1">NFT #{index + 1}</p>
-                            <p className="text-xs text-gray-500 font-mono truncate">
-                              {nft.NFTokenID}
-                            </p>
-                            {nft.URI && (
-                              <p className="text-xs text-gray-400 mt-2 truncate">
-                                URI: {nft.URI}
-                              </p>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <div className="bg-yellow-50 p-6 rounded-lg border border-yellow-200">
-                    <p className="text-yellow-800">
-                      Veuillez connecter votre wallet depuis le header pour voir vos NFTs.
-                    </p>
-                  </div>
                 )}
               </div>
             )}

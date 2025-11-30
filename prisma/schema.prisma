@@ -16,12 +16,14 @@ model User {
   password      String
   name          String?
   role          String    @default("USER") // ADMIN, ASSOCIATION, USER
+  walletAddress String?   // Adresse XRPL optionnelle pour les users
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   
   // Relation avec Association si l'utilisateur est une association
   association   Association?
   admin         Admin?
+  donations     Donation[]
   
   @@map("users")
 }
@@ -74,6 +76,7 @@ model Event {
   updatedAt     DateTime @updatedAt
   
   contributions EventContribution[]
+  blockchainEvents BlockchainEvent[]
   
   @@map("events")
   @@index([associationId])
@@ -92,6 +95,7 @@ model EventContribution {
   createdAt   DateTime @default(now())
   
   event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  blockchainEvents BlockchainEvent[]
   
   @@map("event_contributions")
   @@index([eventId])
@@ -124,4 +128,62 @@ model HeroOwnership {
   
   @@map("hero_ownerships")
   @@index([walletAddress])
+}
+
+model Donation {
+  id                      String   @id @default(cuid())
+  userId                  String?
+  donorWalletAddress      String   // Adresse wallet du donateur
+  associationWalletAddress String  // Adresse wallet de l'association (directement)
+  amount                  Float    // Montant en XRP
+  txHash                  String   // Hash de la transaction XRPL
+  status                  String   @default("pending") // pending, confirmed, failed
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+  
+  user                    User?    @relation(fields: [userId], references: [id])
+  items                   DonationItem[]
+  blockchainEvents        BlockchainEvent[]
+  
+  @@map("donations")
+  @@index([donorWalletAddress])
+  @@index([associationWalletAddress])
+  @@index([txHash])
+}
+
+model DonationItem {
+  id            String   @id @default(cuid())
+  donationId   String
+  itemName     String
+  itemType     String
+  rarity       String
+  nftTokenId   String?
+  nftTxHash    String?
+  createdAt    DateTime @default(now())
+  
+  donation     Donation @relation(fields: [donationId], references: [id], onDelete: Cascade)
+  
+  @@map("donation_items")
+  @@index([nftTokenId])
+}
+
+model BlockchainEvent {
+  id                  String   @id @default(cuid())
+  type                String   // "payment", "nft_mint", "nft_transfer", "event_contribution"
+  donationId          String?
+  eventId             String?
+  eventContributionId String?
+  txHash              String
+  status              String   // pending, confirmed, failed
+  metadata            String?  // JSON avec détails
+  createdAt           DateTime @default(now())
+  confirmedAt         DateTime?
+  
+  donation            Donation? @relation(fields: [donationId], references: [id])
+  event               Event?    @relation(fields: [eventId], references: [id])
+  eventContribution   EventContribution? @relation(fields: [eventContributionId], references: [id])
+  
+  @@map("blockchain_events")
+  @@index([txHash])
+  @@index([type])
 }

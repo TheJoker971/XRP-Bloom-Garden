@@ -58,6 +58,16 @@ const NATURE_ITEMS: PackItem[] = [
   },
 ];
 
+// Items Événement Feu
+const FIRE_EVENT_ITEMS: PackItem[] = [
+  {
+    id: "water_bucket",
+    name: "Seau d'Eau",
+    rarity: Rarity.COMMON,
+    imageUrl: "/images/sceau_eau.png",
+  },
+];
+
 // Packs
 export const PACKS: Record<string, Pack> = {
   pack_nature_basic: {
@@ -88,5 +98,18 @@ export const PACKS: Record<string, Pack> = {
     },
     pool: NATURE_ITEMS,
   },
+  pack_fire_event: {
+    id: "pack_fire_event",
+    name: "Pack Événement Incendie",
+    description: "Sceaux d'eau pour éteindre l'incendie",
+    price: 5,
+    category: "event",
+    probabilities: {
+      [Rarity.COMMON]: 100,
+      [Rarity.RARE]: 0,
+      [Rarity.EPIC]: 0,
+      [Rarity.LEGENDARY]: 0,
+    },
+    pool: FIRE_EVENT_ITEMS,
+  },
 };
-

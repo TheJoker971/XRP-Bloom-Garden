@@ -4,6 +4,14 @@ import { createContext, useContext, useState, useCallback, ReactNode, useEffect 
 import { Client } from 'xrpl';
 import { WalletType, WalletInfo, connectWallet, getWalletName } from '@/lib/wallets';
 
+interface BlockchainEvent {
+  timestamp: string;
+  name: string;
+  data: any;
+  txHash?: string;
+  status?: 'success' | 'error' | 'pending';
+}
+
 interface XRPLWalletContextType {
   isConnected: boolean;
   walletInfo: WalletInfo | null;
@@ -11,9 +19,13 @@ interface XRPLWalletContextType {
   balance: string | null;
   isLoading: boolean;
   error: string | null;
+  events: BlockchainEvent[];
   connect: (type: WalletType) => Promise<void>;
   disconnect: () => void;
   refreshBalance: () => Promise<void>;
+  addEvent: (name: string, data: any, txHash?: string, status?: 'success' | 'error' | 'pending') => void;
+  clearEvents: () => void;
+  getWalletType: () => WalletType | null;
 }
 
 const XRPLWalletContext = createContext<XRPLWalletContextType | undefined>(undefined);
@@ -29,6 +41,7 @@ export function XRPLWalletProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [client, setClient] = useState<Client | null>(null);
+  const [events, setEvents] = useState<BlockchainEvent[]>([]);
 
   // Initialiser le client XRPL
   useEffect(() => {
@@ -121,6 +134,47 @@ export function XRPLWalletProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('xrpl_wallet');
   }, []);
 
+  const addEvent = useCallback((
+    name: string, 
+    data: any, 
+    txHash?: string, 
+    status: 'success' | 'error' | 'pending' = 'success'
+  ) => {
+    const timestamp = new Date().toISOString();
+    const event: BlockchainEvent = {
+      timestamp,
+      name,
+      data,
+      txHash,
+      status,
+    };
+    setEvents((prev) => [event, ...prev]);
+
+    // Enregistrer l'événement dans la base de données via l'API
+    if (txHash) {
+      fetch('/api/blockchain/events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: name.toLowerCase().replace(/\s+/g, '_'),
+          txHash,
+          metadata: data,
+          status: status === 'success' ? 'confirmed' : status === 'error' ? 'failed' : 'pending',
+        }),
+      }).catch(error => {
+        console.error('Erreur lors de l\'enregistrement de l\'événement blockchain:', error);
+      });
+    }
+  }, []);
+
+  const clearEvents = useCallback(() => {
+    setEvents([]);
+  }, []);
+
+  const getWalletType = useCallback(() => {
+    return walletType;
+  }, [walletType]);
+
   return (
     <XRPLWalletContext.Provider
       value={{
@@ -130,9 +184,13 @@ export function XRPLWalletProvider({ children }: { children: ReactNode }) {
         balance,
         isLoading,
         error,
+        events,
         connect,
         disconnect,
         refreshBalance,
+        addEvent,
+        clearEvents,
+        getWalletType,
       }}
     >
       {children}

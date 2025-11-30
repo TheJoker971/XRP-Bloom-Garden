@@ -58,6 +58,16 @@ export async function GET(
       .sort((a, b) => b.totalTickets - a.totalTickets)
       .slice(0, 10);
 
+    // Récupérer l'association qui a créé l'événement
+    let associationWalletAddress = null;
+    if (event.associationId) {
+      const association = await prisma.association.findUnique({
+        where: { id: event.associationId },
+        select: { walletAddress: true, name: true },
+      });
+      associationWalletAddress = association?.walletAddress || null;
+    }
+
     return NextResponse.json({
       event: {
         id: event.id,
@@ -71,6 +81,8 @@ export async function GET(
         healthPercentage: (event.currentHealth / event.maxHealth) * 100,
         startDate: event.startDate,
         endDate: event.endDate,
+        associationId: event.associationId, // ID de l'association
+        associationWalletAddress, // Adresse wallet de l'association
       },
       leaderboard,
     });
