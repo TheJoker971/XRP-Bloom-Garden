@@ -81,6 +81,7 @@ export async function GET(
         healthPercentage: (event.currentHealth / event.maxHealth) * 100,
         startDate: event.startDate,
         endDate: event.endDate,
+        associationId: event.associationId, // ID de l'association
         associationWalletAddress, // Adresse wallet de l'association
       },
       leaderboard,

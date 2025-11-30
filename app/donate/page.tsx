@@ -70,6 +70,20 @@ export default function DonatePage() {
         (assoc: Association) => assoc.walletAddress && assoc.walletAddress.trim() !== ''
       );
       setAssociations(associationsWithWallet);
+      
+      // Si un événement est actif, pré-sélectionner l'association de cet événement
+      const saved = localStorage.getItem("participatingEvent");
+      if (saved) {
+        const eventData = JSON.parse(saved);
+        if (eventData.associationId) {
+          const eventAssociation = associationsWithWallet.find(
+            (assoc: Association) => assoc.id === eventData.associationId
+          );
+          if (eventAssociation) {
+            setSelectedAssociation(eventAssociation);
+          }
+        }
+      }
     } catch (error) {
       console.error("Erreur:", error);
     } finally {
@@ -88,9 +102,20 @@ export default function DonatePage() {
     const saved = localStorage.getItem("participatingEvent");
     if (saved) {
       const eventData = JSON.parse(saved);
+      
+      // Migration : corriger l'ancien totalNeeded de 20 à 10
+      if (eventData.totalNeeded === 20) {
+        eventData.totalNeeded = 10;
+        // Ajuster aussi usedBuckets proportionnellement si nécessaire
+        if (eventData.usedBuckets > 10) {
+          eventData.usedBuckets = Math.min(10, Math.floor(eventData.usedBuckets / 2));
+        }
+        localStorage.setItem("participatingEvent", JSON.stringify(eventData));
+      }
+      
       setActiveEvent(eventData);
       const usedBuckets = eventData.usedBuckets || 0;
-      const totalNeeded = eventData.totalNeeded || 100;
+      const totalNeeded = eventData.totalNeeded || 10;
       setEventProgress(Math.min(100, (usedBuckets / totalNeeded) * 100));
     }
   };
@@ -197,14 +222,32 @@ export default function DonatePage() {
         throw new Error(data.error || 'Erreur lors du don');
       }
 
-      // Mapper les items de l'API
-      const items = data.items.map((item: any) => ({
-        id: item.itemType,
-        name: item.itemName,
-        rarity: item.rarity,
-        type: item.itemType,
-        nftTokenId: item.nftTokenId,
-      }));
+      // Si un événement est actif et qu'on donne à l'association de l'événement,
+      // donner des seaux d'eau au lieu de tirages normaux
+      const isEventDonation = activeEvent && activeEvent.associationId === selectedAssociation.id;
+      
+      let items;
+      if (isEventDonation) {
+        // Calculer le nombre de seaux d'eau (1 seau par tranche de 5 XRP)
+        const bucketCount = Math.floor(amount / 5);
+        items = Array(bucketCount).fill(null).map(() => ({
+          id: 'water_bucket',
+          name: 'Seau d\'eau',
+          rarity: 'COMMON',
+          type: 'water_bucket',
+          nftTokenId: null,
+        }));
+        console.log(`🔥 Don pour événement : ${bucketCount} seau(x) d'eau reçu(s) !`);
+      } else {
+        // Tirages normaux - mapper les items de l'API
+        items = data.items.map((item: any) => ({
+          id: item.itemType,
+          name: item.itemName,
+          rarity: item.rarity,
+          type: item.itemType,
+          nftTokenId: item.nftTokenId,
+        }));
+      }
 
       setDrawnItems(items);
       const newVillageItems = [...villageItems, ...items];
@@ -268,13 +311,13 @@ export default function DonatePage() {
                   backgroundImage={activeEvent ? "/images/biome_en_feu.png.webp" : "/village.png"}
                   eventProgress={activeEvent ? eventProgress : undefined}
                   usedBuckets={activeEvent ? (activeEvent.usedBuckets || 0) : 0}
-                  totalNeeded={activeEvent ? (activeEvent.totalNeeded || 20) : 20}
+                  totalNeeded={activeEvent ? (activeEvent.totalNeeded || 10) : 10}
                   onItemPlaced={(itemId, quantity) => {
                     if (itemId === "water_bucket" && activeEvent) {
                       const newEvent = { ...activeEvent };
                       const previousBuckets = newEvent.usedBuckets || 0;
                       newEvent.usedBuckets = previousBuckets + quantity;
-                      const totalNeeded = newEvent.totalNeeded || 20;
+                      const totalNeeded = newEvent.totalNeeded || 10;
                       const newProgress = Math.min(100, (newEvent.usedBuckets / totalNeeded) * 100);
                       
                       setActiveEvent(newEvent);
@@ -407,6 +450,31 @@ export default function DonatePage() {
                   Faire un don
                 </h3>
 
+                {activeEvent && activeEvent.associationId === selectedAssociation.id && (
+                  <div className="mb-4 p-3 bg-orange-50 border-2 border-orange-300 rounded-lg">
+                    <div className="flex items-center gap-2 text-orange-800 mb-2">
+                      <span className="text-2xl">🔥</span>
+                      <div className="flex-1">
+                        <p className="font-bold text-sm">Événement actif dans ton village !</p>
+                        <p className="text-xs">
+                          Tes dons iront automatiquement à l'association de l'événement "{activeEvent.name}"
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between bg-orange-100 rounded px-3 py-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">💧</span>
+                        <span className="text-xs font-medium text-orange-900">
+                          Progression : {activeEvent.usedBuckets || 0} / {activeEvent.totalNeeded || 10} seaux
+                        </span>
+                      </div>
+                      <span className="text-xs font-bold text-orange-700">
+                        {Math.round(eventProgress)}%
+                      </span>
+                    </div>
+                  </div>
+                )}
+
                 <div
                   className={`p-4 rounded-lg bg-gradient-to-r ${getTypeColor(
                     selectedAssociation.type
@@ -456,24 +524,57 @@ export default function DonatePage() {
                     </div>
 
                     {donationAmount && parseFloat(donationAmount) >= 5 && (
-                      <div className="bg-green-50 p-4 rounded-lg border border-green-200 mb-4">
+                      <div className={`p-4 rounded-lg border mb-4 ${
+                        activeEvent && activeEvent.associationId === selectedAssociation?.id
+                          ? 'bg-orange-50 border-orange-200'
+                          : 'bg-green-50 border-green-200'
+                      }`}>
                         <div className="flex items-center gap-2 mb-2">
-                          <Gift className="w-5 h-5 text-green-600" />
-                          <span className="font-bold text-green-800">
-                            Récompenses
-                          </span>
+                          {activeEvent && activeEvent.associationId === selectedAssociation?.id ? (
+                            <>
+                              <span className="text-xl">💧</span>
+                              <span className="font-bold text-orange-800">
+                                Récompenses Événement
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              <Gift className="w-5 h-5 text-green-600" />
+                              <span className="font-bold text-green-800">
+                                Récompenses
+                              </span>
+                            </>
+                          )}
                         </div>
-                        <p className="text-sm text-green-700">
-                          Vous recevrez{" "}
-                          <strong>
-                            {calculateDraws(parseFloat(donationAmount))}{" "}
-                            tirage(s)
-                          </strong>{" "}
-                          !
-                        </p>
-                        <p className="text-xs text-green-600 mt-1">
-                          1 tirage = 1 objet pour votre village
-                        </p>
+                        {activeEvent && activeEvent.associationId === selectedAssociation?.id ? (
+                          <>
+                            <p className="text-sm text-orange-700">
+                              Vous recevrez{" "}
+                              <strong>
+                                {calculateDraws(parseFloat(donationAmount))}{" "}
+                                seau(x) d'eau
+                              </strong>{" "}
+                              pour éteindre l'incendie !
+                            </p>
+                            <p className="text-xs text-orange-600 mt-1">
+                              🔥 1 seau d'eau par tranche de 5 XRP
+                            </p>
+                          </>
+                        ) : (
+                          <>
+                            <p className="text-sm text-green-700">
+                              Vous recevrez{" "}
+                              <strong>
+                                {calculateDraws(parseFloat(donationAmount))}{" "}
+                                tirage(s)
+                              </strong>{" "}
+                              !
+                            </p>
+                            <p className="text-xs text-green-600 mt-1">
+                              1 tirage = 1 objet pour votre village
+                            </p>
+                          </>
+                        )}
                       </div>
                     )}
 
@@ -524,34 +625,46 @@ export default function DonatePage() {
                 </p>
               ) : (
                 <div className="space-y-3 max-h-96 overflow-y-auto">
-                  {associations.map((association) => (
-                    <button
-                      key={association.id}
-                      onClick={() => setSelectedAssociation(association)}
-                      className={`w-full text-left p-4 rounded-lg border-2 transition-all ${
-                        selectedAssociation?.id === association.id
-                          ? "border-green-500 bg-green-50"
-                          : "border-gray-200 hover:border-green-300 hover:bg-gray-50"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3 flex-1">
-                          <div className="text-2xl">
-                            {getTypeIcon(association.type)}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="font-bold text-gray-900 truncate">
-                              {association.name}
+                  {associations.map((association) => {
+                    const isEventAssociation = activeEvent && activeEvent.associationId === association.id;
+                    return (
+                      <button
+                        key={association.id}
+                        onClick={() => setSelectedAssociation(association)}
+                        className={`w-full text-left p-4 rounded-lg border-2 transition-all ${
+                          selectedAssociation?.id === association.id
+                            ? "border-green-500 bg-green-50"
+                            : isEventAssociation
+                            ? "border-orange-400 bg-orange-50 hover:border-orange-500"
+                            : "border-gray-200 hover:border-green-300 hover:bg-gray-50"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-3 flex-1 min-w-0">
+                            <div className="text-2xl flex-shrink-0">
+                              {getTypeIcon(association.type)}
                             </div>
-                            <div className="text-xs text-gray-600 truncate">
-                              {association.description}
+                            <div className="flex-1 min-w-0 overflow-hidden">
+                              <div className="flex items-center gap-2 mb-1">
+                                <div className="font-bold text-gray-900 truncate">
+                                  {association.name}
+                                </div>
+                                {isEventAssociation && (
+                                  <span className="text-xs px-2 py-0.5 bg-orange-500 text-white rounded-full whitespace-nowrap flex-shrink-0">
+                                    🔥 Événement
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-xs text-gray-600 line-clamp-2">
+                                {association.description}
+                              </div>
                             </div>
                           </div>
+                          <ChevronRight className="w-5 h-5 text-gray-400 flex-shrink-0" />
                         </div>
-                        <ChevronRight className="w-5 h-5 text-gray-400 flex-shrink-0" />
-                      </div>
-                    </button>
-                  ))}
+                      </button>
+                    );
+                  })}
                 </div>
               )}
             </div>

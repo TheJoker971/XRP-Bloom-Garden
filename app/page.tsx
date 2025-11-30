@@ -30,9 +30,12 @@ export default function Home() {
             >
               Commencer maintenant
             </Link>
-            <button className="px-8 py-4 border-2 border-green-600 text-green-600 hover:bg-green-50 font-semibold rounded-lg transition-all">
+            <Link 
+              href="/about"
+              className="px-8 py-4 border-2 border-green-600 text-green-600 hover:bg-green-50 font-semibold rounded-lg transition-all inline-block"
+            >
               En savoir plus
-            </button>
+            </Link>
           </div>
         </div>
 
@@ -168,7 +171,7 @@ export default function Home() {
             </div>
           </div>
           <div className="border-t border-green-700 pt-8 text-center text-green-100">
-            <p>&copy; 2024 XRP Bloom Garden. Tous droits réservés.</p>
+            <p>&copy; 2025 XRP Bloom Garden. Tous droits réservés.</p>
           </div>
         </div>
       </footer>

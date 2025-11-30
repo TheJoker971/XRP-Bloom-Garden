@@ -15,6 +15,7 @@ interface EventData {
     multiplier: number;
     healthPercentage: number;
     status: string;
+    associationId: string;
     associationWalletAddress?: string | null;
   } | null;
   leaderboard: Array<{
@@ -34,6 +35,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
   const [purchasing, setPurchasing] = useState(false);
   const [showVictory, setShowVictory] = useState(false);
   const [showCrisisPopup, setShowCrisisPopup] = useState(false);
+  const [popupWasClosedThisSession, setPopupWasClosedThisSession] = useState(false);
   const [lastDamage, setLastDamage] = useState<number | null>(null);
   const [notification, setNotification] = useState<string | null>(null);
   const [damageHistory, setDamageHistory] = useState<Array<{damage: number, timestamp: number}>>([]);
@@ -46,18 +48,17 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
   }, [resolvedParams.id]);
 
   useEffect(() => {
-    // Afficher la popup de crise uniquement au premier chargement si l'événement est actif
-    // et si l'utilisateur ne l'a pas déjà fermée pour cet événement
-    if (eventData?.event && eventData.event.status === 'active') {
-      const popupClosedKey = `crisis_popup_closed_${resolvedParams.id}`;
-      const wasClosed = localStorage.getItem(popupClosedKey);
-      if (!wasClosed) {
+    // Afficher la popup de crise si l'événement est actif
+    // ET si elle n'a pas été fermée pendant cette session
+    if (eventData?.event && eventData.event.status === 'active' && !popupWasClosedThisSession) {
+      // Utiliser un petit délai pour s'assurer que le DOM est prêt
+      setTimeout(() => {
         setShowCrisisPopup(true);
-      }
-    } else {
+      }, 100);
+    } else if (eventData?.event?.status !== 'active') {
       setShowCrisisPopup(false);
     }
-  }, [eventData, resolvedParams.id]);
+  }, [eventData, resolvedParams.id, popupWasClosedThisSession]);
 
   const fetchEventData = async () => {
     try {
@@ -295,10 +296,11 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
               localStorage.setItem("participatingEvent", JSON.stringify({
                 id: event.id,
                 name: event.name,
+                associationId: event.associationId,
                 usedBuckets: 0,
-                totalNeeded: 20
+                totalNeeded: 10
               }));
-              alert("🔥 L'événement incendie est maintenant actif dans ton village ! Va sur la page 'Faire un don' pour obtenir des sceaux d'eau et éteindre l'incendie (20 sceaux nécessaires).");
+              alert("🔥 L'événement incendie est maintenant actif dans ton village ! Va sur la page 'Faire un don' pour obtenir des sceaux d'eau et éteindre l'incendie (10 sceaux nécessaires = 50 XRP). Tes dons iront automatiquement à l'association qui a créé cet événement !");
             }}
             className="px-8 py-4 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-2xl font-bold text-lg hover:from-orange-700 hover:to-red-700 transition shadow-xl hover:shadow-2xl hover:scale-105 transform"
           >
@@ -508,9 +510,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
               <button
                 onClick={() => {
                   setShowCrisisPopup(false);
-                  // Mémoriser que l'utilisateur a fermé la popup pour cet événement
-                  const popupClosedKey = `crisis_popup_closed_${resolvedParams.id}`;
-                  localStorage.setItem(popupClosedKey, 'true');
+                  setPopupWasClosedThisSession(true);
                 }}
                 className="w-full px-8 py-4 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-xl font-bold text-xl hover:from-orange-700 hover:to-red-700 transition shadow-lg"
               >

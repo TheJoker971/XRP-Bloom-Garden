@@ -3,6 +3,7 @@
 import { Client, Payment, xrpToDrops } from 'xrpl';
 
 const XRPL_TESTNET_URL = 'wss://s.altnet.rippletest.net:51233';
+const XRPL_DEVNET_URL = 'wss://s.devnet.rippletest.net:51233';
 const XRPL_MAINNET_URL = 'wss://xrplcluster.com';
 
 export interface PaymentParams {
@@ -36,11 +37,15 @@ export async function sendPaymentWithWalletManager(
     throw new Error('Wallet not connected');
   }
 
-  const client = new Client(
-    process.env.NEXT_PUBLIC_XRPL_NETWORK === 'mainnet' 
-      ? XRPL_MAINNET_URL 
-      : XRPL_TESTNET_URL
-  );
+  const networkUrl = process.env.NEXT_PUBLIC_XRPL_NETWORK === 'mainnet' 
+    ? XRPL_MAINNET_URL 
+    : process.env.NEXT_PUBLIC_XRPL_NETWORK === 'testnet'
+    ? XRPL_TESTNET_URL
+    : XRPL_DEVNET_URL;
+
+  const client = new Client(networkUrl, {
+    connectionTimeout: 30000,
+  });
 
   try {
     await client.connect();
@@ -127,11 +132,15 @@ export async function sendPaymentWithWallet(
   walletType: 'gem' | 'xaman' | 'crossmark',
   params: PaymentParams
 ): Promise<PaymentResult> {
-  const client = new Client(
-    process.env.NEXT_PUBLIC_XRPL_NETWORK === 'mainnet' 
-      ? XRPL_MAINNET_URL 
-      : XRPL_TESTNET_URL
-  );
+  const networkUrl = process.env.NEXT_PUBLIC_XRPL_NETWORK === 'mainnet' 
+    ? XRPL_MAINNET_URL 
+    : process.env.NEXT_PUBLIC_XRPL_NETWORK === 'testnet'
+    ? XRPL_TESTNET_URL
+    : XRPL_DEVNET_URL;
+
+  const client = new Client(networkUrl, {
+    connectionTimeout: 30000,
+  });
 
   try {
     await client.connect();

@@ -21,7 +21,7 @@ export default function GardenCanvas({
   backgroundImage = "/village.png",
   eventProgress,
   usedBuckets = 0,
-  totalNeeded = 20
+  totalNeeded = 10
 }: Props = {}) {
   const [placed, setPlaced] = useState<Placed[]>([]);
   const ref = useRef<HTMLDivElement | null>(null);

@@ -104,10 +104,16 @@ export function Header() {
                 🔥 Événement
               </Link>
               <Link
-                href="/partnership"
-                className="text-gray-700 hover:text-sky-600 font-medium transition-colors text-sm"
+                href="/about"
+                className="text-gray-700 hover:text-purple-600 font-medium transition-colors text-sm"
               >
-                Partenaire
+                À propos
+              </Link>
+              <Link
+                href="/partnership"
+                className="px-4 py-2 bg-gradient-to-r from-sky-500 to-blue-600 text-white font-bold rounded-lg hover:from-sky-600 hover:to-blue-700 transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5 text-sm"
+              >
+                🤝 Devenir Partenaire
               </Link>
             </nav>
 
