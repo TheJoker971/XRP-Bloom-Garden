@@ -6,6 +6,14 @@ type DragPayload = { id: string; name?: string; imageUrl?: string | null; quanti
 
 const ITEM_SIZE = 64;
 
+const getItemSize = (itemId: string) => {
+  if (itemId === "sanctuary") return 180; // Sanctuaire beaucoup plus grand
+  if (itemId === "cabin") return 120; // Cabane grande
+  if (itemId === "world_tree") return 96; // Phoenix Tree plus grand
+  if (itemId === "path") return 90; // Chemin agrandi
+  return ITEM_SIZE;
+};
+
 type Props = {
   onItemPlaced?: (itemId: string, quantity: number) => void;
   hasItems?: boolean;
@@ -95,10 +103,11 @@ export default function GardenCanvas({
     } else {
       // Placement en grille ultra-serrée pour créer une forêt dense
       const newItems: Placed[] = [];
+      const itemSize = getItemSize(parsed.id);
       const gap = -25; // Chevauchement modéré pour forêt dense
       const itemsPerRow = Math.ceil(Math.sqrt(quantity));
-      const totalWidth = (ITEM_SIZE * itemsPerRow) + (gap * (itemsPerRow - 1));
-      const totalHeight = (ITEM_SIZE * Math.ceil(quantity / itemsPerRow)) + (gap * (Math.ceil(quantity / itemsPerRow) - 1));
+      const totalWidth = (itemSize * itemsPerRow) + (gap * (itemsPerRow - 1));
+      const totalHeight = (itemSize * Math.ceil(quantity / itemsPerRow)) + (gap * (Math.ceil(quantity / itemsPerRow) - 1));
       
       // Point de départ centré
       const startX = Math.max(0, Math.min(rect.width - totalWidth, centerX - totalWidth / 2));
@@ -107,8 +116,8 @@ export default function GardenCanvas({
       for (let i = 0; i < quantity; i++) {
         const row = Math.floor(i / itemsPerRow);
         const col = i % itemsPerRow;
-        const x = Math.max(0, Math.min(rect.width - ITEM_SIZE, startX + col * (ITEM_SIZE + gap)));
-        const y = Math.max(0, Math.min(rect.height - ITEM_SIZE, startY + row * (ITEM_SIZE + gap)));
+        const x = Math.max(0, Math.min(rect.width - itemSize, startX + col * (itemSize + gap)));
+        const y = Math.max(0, Math.min(rect.height - itemSize, startY + row * (itemSize + gap)));
         newItems.push({ id: parsed.id, imageUrl: parsed.imageUrl || null, x, y });
       }
       
@@ -137,10 +146,11 @@ export default function GardenCanvas({
       const y = e.clientY - rect.top - drag.offsetY;
       setPlaced((prev) => {
         const copy = [...prev];
+        const itemSize = getItemSize(copy[drag.index].id);
         copy[drag.index] = {
           ...copy[drag.index],
-          x: Math.max(0, Math.min(rect.width - ITEM_SIZE, x)),
-          y: Math.max(0, Math.min(rect.height - ITEM_SIZE, y)),
+          x: Math.max(0, Math.min(rect.width - itemSize, x)),
+          y: Math.max(0, Math.min(rect.height - itemSize, y)),
         };
         return copy;
       });
@@ -283,19 +293,19 @@ export default function GardenCanvas({
         const getItemEmoji = (id: string) => {
           const emojiMap: Record<string, string> = {
             tree_small: "🌱",
-            bush: "🌿",
             rock: "🪨",
             flower: "🌸",
-            tree_large: "🌳",
             beehive: "🐝",
-            fountain: "⛲",
-            wind_turbine: "💨",
-            eco_sanctuary: "🏛️",
             world_tree: "🌲",
             water_bucket: "💧",
+            sanctuary: "🏛️",
+            cabin: "🏠",
+            path: "🛤️",
           };
           return emojiMap[id] || "📦";
         };
+
+        const itemSize = getItemSize(p.id);
 
         return (
           <div
@@ -305,8 +315,8 @@ export default function GardenCanvas({
               position: "absolute",
               left: p.x,
               top: p.y,
-              width: ITEM_SIZE,
-              height: ITEM_SIZE,
+              width: itemSize,
+              height: itemSize,
               touchAction: "none",
               cursor: "grab",
             }}
@@ -317,16 +327,16 @@ export default function GardenCanvas({
                 src={p.imageUrl} 
                 alt={p.id} 
                 style={{
-                  width: ITEM_SIZE, 
-                  height: ITEM_SIZE, 
+                  width: itemSize, 
+                  height: itemSize, 
                   objectFit: "contain",
                   pointerEvents: "none",
                 }} 
               />
             ) : (
               <div style={{
-                width: ITEM_SIZE,
-                height: ITEM_SIZE,
+                width: itemSize,
+                height: itemSize,
                 background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
                 borderRadius: "0.5rem",
                 display: "flex",

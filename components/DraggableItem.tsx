@@ -9,6 +9,8 @@ type Props = {
 };
 
 export default function DraggableItem({ item, width = 64, quantity = 1, onQuantityChange }: Props) {
+  const imgRef = React.useRef<HTMLImageElement>(null);
+
   function onDragStart(e: React.DragEvent) {
     console.log("Drag started for item:", item.id, "quantity:", quantity);
     const payload = {
@@ -20,15 +22,12 @@ export default function DraggableItem({ item, width = 64, quantity = 1, onQuanti
     e.dataTransfer.setData("application/json", JSON.stringify(payload));
     console.log("Payload set:", payload);
 
-    // If we have an image, use it as drag image to improve UX
-    if (item.imageUrl) {
-      const img = new Image();
-      img.src = item.imageUrl;
-      // if image is remote it may not be loaded immediately; still set it
+    // Use the actual image element as drag image
+    if (imgRef.current) {
       try {
-        e.dataTransfer.setDragImage(img, width / 2, width / 2);
+        e.dataTransfer.setDragImage(imgRef.current, width / 2, width / 2);
       } catch (err) {
-        // ignore if browser blocks setDragImage for remote images
+        console.log("Could not set drag image:", err);
       }
     }
   }
@@ -59,6 +58,7 @@ export default function DraggableItem({ item, width = 64, quantity = 1, onQuanti
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
+            ref={imgRef}
             src={item.imageUrl}
             alt={item.name}
             width={width}
