@@ -45,7 +45,7 @@ async function main() {
       description: 'Association dédiée à la protection et la reforestation des forêts tropicales. Nous plantons plus de 10 000 arbres par an.',
       website: 'https://greenforest.org',
       status: 'APPROVED',
-      walletAddress: 'rN7n7otQDd6FczFgLdlqtyMVrn3HMfXoZM',
+      walletAddress: 'rUmidcvdjYV499UyiHCf7GAD51Qt1WUJ8L',
     },
     {
       email: 'info@oceanblue.org',
@@ -55,7 +55,7 @@ async function main() {
       description: 'Protection des océans et de la vie marine. Nettoyage des plages et sensibilisation à la pollution plastique.',
       website: 'https://oceanblue.org',
       status: 'APPROVED',
-      walletAddress: 'rPEPPER7kfTD9w2To4CQk6UCfuHM9c6GDY',
+      walletAddress: 'rUmidcvdjYV499UyiHCf7GAD51Qt1WUJ8L',
     },
     {
       email: 'contact@helpinghearts.org',
@@ -65,7 +65,7 @@ async function main() {
       description: 'Aide humanitaire internationale. Nous apportons nourriture, eau et soins médicaux aux populations dans le besoin.',
       website: 'https://helpinghearts.org',
       status: 'APPROVED',
-      walletAddress: 'rU6K7V3Po4snVhBBaU29sesqs2qTQJWDw1',
+      walletAddress: 'rUmidcvdjYV499UyiHCf7GAD51Qt1WUJ8L',
     },
     {
       email: 'info@cleanair.org',
@@ -75,7 +75,7 @@ async function main() {
       description: 'Lutte contre la pollution atmosphérique et promotion des énergies renouvelables.',
       website: 'https://cleanair.org',
       status: 'PENDING',
-      walletAddress: null,
+      walletAddress: 'rUmidcvdjYV499UyiHCf7GAD51Qt1WUJ8L',
     },
     {
       email: 'contact@firefighters.org',
@@ -85,7 +85,7 @@ async function main() {
       description: 'Prévention et lutte contre les incendies de forêt. Formation des populations locales et équipement des pompiers.',
       website: 'https://firefighters.org',
       status: 'APPROVED',
-      walletAddress: 'rLHzPsX6oXkzU9rFYentvBz5FBrqtMxoPb',
+      walletAddress: 'rUmidcvdjYV499UyiHCf7GAD51Qt1WUJ8L',
     },
     {
       email: 'contact@earthguardians.org',
@@ -95,7 +95,7 @@ async function main() {
       description: 'Protection de la biodiversité et des écosystèmes naturels.',
       website: null,
       status: 'REJECTED',
-      walletAddress: null,
+      walletAddress: 'rUmidcvdjYV499UyiHCf7GAD51Qt1WUJ8L',
     },
   ];
 
