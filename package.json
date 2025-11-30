@@ -1,0 +1,40 @@
+{
+  "name": "xrp-bloom-garden-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "seed": "tsx prisma/seed.ts",
+    "db:reset": "npx prisma migrate reset --force && npm run seed"
+  },
+  "dependencies": {
+    "@gemwallet/api": "^3.8.0",
+    "@prisma/client": "^5.19.0",
+    "bcryptjs": "^3.0.3",
+    "jsonwebtoken": "^9.0.2",
+    "lucide-react": "^0.555.0",
+    "next": "16.0.5",
+    "next-auth": "^4.24.13",
+    "prisma": "^5.19.0",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "xrpl": "^4.4.3",
+    "xrpl-connect": "^0.4.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^20.19.25",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.0.5",
+    "tailwindcss": "^4",
+    "tsx": "^4.20.6",
+    "typescript": "^5"
+  }
+}

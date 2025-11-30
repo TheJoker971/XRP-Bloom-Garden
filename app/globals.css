@@ -1,0 +1,63 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #1F2937;
+  --green-50: #F0FDF4;
+  --green-100: #DCFCE7;
+  --green-400: #4ADE80;
+  --green-600: #16A34A;
+  --green-800: #166534;
+  --sky-50: #F0F9FF;
+  --sky-100: #E0F2FE;
+  --sky-400: #38BDF8;
+  --sky-600: #0284C7;
+  --sky-800: #075985;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
+}
+
+/* Smooth transitions */
+* {
+  transition-property: color, background-color, border-color;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+/* Styles pour xrpl-wallet-connector - amélioration du hover */
+xrpl-wallet-connector {
+  --xc-connect-button-transition: all 0.2s ease-in-out;
+  --xc-connect-button-hover-transform: translateY(-1px);
+  --xc-connect-button-hover-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);
+}
+
+/* Note: Les erreurs MetaMask sont normales et n'affectent pas XRPL
+   MetaMask essaie d'injecter un provider Ethereum, mais nous utilisons XRPL
+   qui est une blockchain différente. Ces erreurs peuvent être ignorées. */
+
+/* Animation pour les notifications */
+@keyframes slide-in-right {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.5s ease-out;
+}

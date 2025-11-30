@@ -1,0 +1,189 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  password      String
+  name          String?
+  role          String    @default("USER") // ADMIN, ASSOCIATION, USER
+  walletAddress String?   // Adresse XRPL optionnelle pour les users
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Relation avec Association si l'utilisateur est une association
+  association   Association?
+  admin         Admin?
+  donations     Donation[]
+  
+  @@map("users")
+}
+
+model Association {
+  id            String    @id @default(cuid())
+  userId        String    @unique
+  name          String
+  description   String?
+  type          String    @default("nature") // nature, eau, humanitaire, air, feu
+  address       String?
+  phone         String?
+  website       String?
+  logo          String?
+  status        String    @default("PENDING") // PENDING, APPROVED, REJECTED
+  walletAddress String?   // Adresse XRPL de l'association
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("associations")
+}
+
+model Admin {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("admins")
+}
+
+model Event {
+  id            String   @id @default(cuid())
+  name          String
+  description   String?
+  type          String   // "boss", "challenge", etc.
+  status        String   @default("active") // active, completed, cancelled
+  currentHealth Int      @default(1000)
+  maxHealth     Int      @default(1000)
+  multiplier    Float    @default(2.0)
+  startDate     DateTime @default(now())
+  endDate       DateTime?
+  rewardNFT     String?  // URI du NFT de récompense
+  associationId String?  // ID de l'association qui a créé l'événement
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  contributions EventContribution[]
+  blockchainEvents BlockchainEvent[]
+  
+  @@map("events")
+  @@index([associationId])
+}
+
+model EventContribution {
+  id          String   @id @default(cuid())
+  eventId     String
+  userId      String?
+  walletAddress String
+  packType    String   // "basic" ou "premium"
+  amount      Float    // Montant en XRP
+  damage      Int      // Dégâts infligés au boss
+  tickets     Int      // Tickets gagnés
+  txHash      String?  // Hash de la transaction XRPL
+  createdAt   DateTime @default(now())
+  
+  event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  blockchainEvents BlockchainEvent[]
+  
+  @@map("event_contributions")
+  @@index([eventId])
+  @@index([walletAddress])
+}
+
+model Hero {
+  id            String   @id @default(cuid())
+  name          String
+  description   String?
+  imageUrl      String?
+  rarity        String   // "common", "rare", "epic", "legendary"
+  eventId       String?  // Si lié à un événement spécifique
+  createdAt     DateTime @default(now())
+  
+  ownerships    HeroOwnership[]
+  
+  @@map("heroes")
+}
+
+model HeroOwnership {
+  id            String   @id @default(cuid())
+  heroId        String
+  userId        String?
+  walletAddress String
+  nftTokenId    String?  // ID du NFT sur XRPL
+  acquiredAt    DateTime @default(now())
+  
+  hero          Hero     @relation(fields: [heroId], references: [id], onDelete: Cascade)
+  
+  @@map("hero_ownerships")
+  @@index([walletAddress])
+}
+
+model Donation {
+  id                      String   @id @default(cuid())
+  userId                  String?
+  donorWalletAddress      String   // Adresse wallet du donateur
+  associationWalletAddress String  // Adresse wallet de l'association (directement)
+  amount                  Float    // Montant en XRP
+  txHash                  String   // Hash de la transaction XRPL
+  status                  String   @default("pending") // pending, confirmed, failed
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+  
+  user                    User?    @relation(fields: [userId], references: [id])
+  items                   DonationItem[]
+  blockchainEvents        BlockchainEvent[]
+  
+  @@map("donations")
+  @@index([donorWalletAddress])
+  @@index([associationWalletAddress])
+  @@index([txHash])
+}
+
+model DonationItem {
+  id            String   @id @default(cuid())
+  donationId   String
+  itemName     String
+  itemType     String
+  rarity       String
+  nftTokenId   String?
+  nftTxHash    String?
+  createdAt    DateTime @default(now())
+  
+  donation     Donation @relation(fields: [donationId], references: [id], onDelete: Cascade)
+  
+  @@map("donation_items")
+  @@index([nftTokenId])
+}
+
+model BlockchainEvent {
+  id                  String   @id @default(cuid())
+  type                String   // "payment", "nft_mint", "nft_transfer", "event_contribution"
+  donationId          String?
+  eventId             String?
+  eventContributionId String?
+  txHash              String
+  status              String   // pending, confirmed, failed
+  metadata            String?  // JSON avec détails
+  createdAt           DateTime @default(now())
+  confirmedAt         DateTime?
+  
+  donation            Donation? @relation(fields: [donationId], references: [id])
+  event               Event?    @relation(fields: [eventId], references: [id])
+  eventContribution   EventContribution? @relation(fields: [eventContributionId], references: [id])
+  
+  @@map("blockchain_events")
+  @@index([txHash])
+  @@index([type])
+}
