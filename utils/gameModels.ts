@@ -20,6 +20,8 @@ export interface PackItem {
   name: string;
   rarity: Rarity;
   description?: string;
+  imageUrl?: string;
+  cardImageUrl?: string;
 }
 
 export interface DrawnItem extends PackItem {

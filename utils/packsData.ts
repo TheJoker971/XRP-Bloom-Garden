@@ -2,16 +2,60 @@ import { Pack, Rarity, PackItem } from "./gameModels";
 
 // Items Nature
 const NATURE_ITEMS: PackItem[] = [
-  { id: "tree_small", name: "Jeune Arbre", rarity: Rarity.COMMON },
-  { id: "bush", name: "Buisson", rarity: Rarity.COMMON },
-  { id: "rock", name: "Rocher", rarity: Rarity.COMMON },
-  { id: "flower", name: "Fleurs", rarity: Rarity.COMMON },
-  { id: "tree_large", name: "Chêne Centenaire", rarity: Rarity.RARE },
-  { id: "beehive", name: "Ruche à Abeilles", rarity: Rarity.RARE },
-  { id: "fountain", name: "Fontaine", rarity: Rarity.RARE },
-  { id: "wind_turbine", name: "Éolienne", rarity: Rarity.EPIC },
-  { id: "eco_sanctuary", name: "Sanctuaire Écologique", rarity: Rarity.EPIC },
-  { id: "world_tree", name: "Arbre-Monde", rarity: Rarity.LEGENDARY },
+  { 
+    id: "tree_small", 
+    name: "Jeune Arbre", 
+    rarity: Rarity.COMMON,
+    imageUrl: "/images/pine.png",
+    cardImageUrl: "/images/Pine_tree_card.png"
+  },
+  { 
+    id: "rock", 
+    name: "Rocher", 
+    rarity: Rarity.COMMON,
+    imageUrl: "/images/rock.png"
+  },
+  { 
+    id: "flower", 
+    name: "Fleurs", 
+    rarity: Rarity.COMMON,
+    imageUrl: "/images/flower.png"
+  },
+  { 
+    id: "path", 
+    name: "Chemin", 
+    rarity: Rarity.COMMON,
+    imageUrl: "/images/chemin.png",
+    cardImageUrl: "/images/chemin_card.png"
+  },
+  { 
+    id: "beehive", 
+    name: "Ruche à Abeilles", 
+    rarity: Rarity.RARE,
+    imageUrl: "/images/beehive.png",
+    cardImageUrl: "/images/Beehive_card.png"
+  },
+  { 
+    id: "cabin", 
+    name: "Cabane", 
+    rarity: Rarity.RARE,
+    imageUrl: "/images/cabane.png",
+    cardImageUrl: "/images/cabane_card.png"
+  },
+  { 
+    id: "sanctuary", 
+    name: "Sanctuaire", 
+    rarity: Rarity.EPIC,
+    imageUrl: "/images/sanctuaire.png",
+    cardImageUrl: "/images/sanctuaire_card.png"
+  },
+  { 
+    id: "world_tree", 
+    name: "Phoenix Tree", 
+    rarity: Rarity.LEGENDARY,
+    imageUrl: "/images/phoenix_tree.png",
+    cardImageUrl: "/images/phoenix_card.png"
+  },
 ];
 
 // Packs
