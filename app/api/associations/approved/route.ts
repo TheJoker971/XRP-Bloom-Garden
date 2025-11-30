@@ -3,10 +3,13 @@ import { prisma } from '@/lib/prisma';
 
 export async function GET(request: NextRequest) {
   try {
-    // Récupérer toutes les associations approuvées
+    // Récupérer toutes les associations approuvées avec une adresse wallet
     const associations = await prisma.association.findMany({
       where: {
         status: 'APPROVED',
+        walletAddress: {
+          not: null, // Seulement les associations avec une adresse wallet
+        },
       },
       select: {
         id: true,

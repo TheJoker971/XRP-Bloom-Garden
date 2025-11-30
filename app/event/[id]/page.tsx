@@ -4,7 +4,6 @@ import { useState, useEffect, use } from 'react';
 import { Header } from '@/components/Header';
 import { useXRPLWallet } from '@/components/providers/XRPLWalletProvider';
 import { Flame, Droplet, Trophy, Zap, Users } from 'lucide-react';
-import { Client, Payment } from 'xrpl';
 
 interface EventData {
   event: {
@@ -16,6 +15,7 @@ interface EventData {
     multiplier: number;
     healthPercentage: number;
     status: string;
+    associationWalletAddress?: string | null;
   } | null;
   leaderboard: Array<{
     walletAddress: string;
@@ -28,7 +28,7 @@ interface EventData {
 
 export default function EventDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
-  const { isConnected, walletInfo } = useXRPLWallet();
+  const { isConnected, walletInfo, walletType } = useXRPLWallet();
   const [eventData, setEventData] = useState<EventData | null>(null);
   const [loading, setLoading] = useState(true);
   const [purchasing, setPurchasing] = useState(false);
@@ -77,18 +77,41 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
       return;
     }
 
+    if (!eventData?.event?.associationWalletAddress) {
+      alert('L\'association n\'a pas configuré son adresse wallet');
+      return;
+    }
+
     setPurchasing(true);
     setLastDamage(null);
 
+    const amount = packType === 'basic' ? 5 : 20;
+
     try {
-      const amount = packType === 'basic' ? 5 : 20;
-      const associationAddress = 'rN7n7otQDd6FczFgLdSqtcsAUxDkw6fzRH';
+      // 1. Envoyer le paiement XRPL réel
+      const { sendPaymentWithWallet } = await import('@/lib/xrpl-client-service-v2');
+      
+      // Utiliser le type de wallet connecté (gem, xaman, crossmark)
+      const currentWalletType = walletType || 'gem'; // Par défaut GemWallet si non défini
+      
+      const paymentResult = await sendPaymentWithWallet(
+        currentWalletType,
+        {
+          fromAddress: walletInfo.address,
+          toAddress: eventData.event.associationWalletAddress,
+          amount,
+          memo: `Contribution à l'événement: ${eventData.event.name}`,
+          eventMetadata: {
+            type: 'event_contribution',
+            eventId: resolvedParams.id,
+            eventName: eventData.event.name,
+            packType,
+            amount,
+          },
+        }
+      );
 
-      const client = new Client('wss://s.altnet.rippletest.net:51233');
-      await client.connect();
-
-      const txHash = `demo_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-
+      // 2. Enregistrer la contribution
       const response = await fetch('/api/events/contribute', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -97,7 +120,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
           walletAddress: walletInfo.address,
           packType,
           amount,
-          txHash,
+          paymentTxHash: paymentResult.txHash,
         }),
       });
 
@@ -136,7 +159,6 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
       }
 
       await fetchEventData();
-      await client.disconnect();
     } catch (error: any) {
       console.error('Erreur:', error);
       alert(error.message || 'Erreur lors de l\'achat');
@@ -298,7 +320,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
 
               <button
                 onClick={() => handlePurchase('basic')}
-                disabled={purchasing || isCompleted || !isConnected}
+                disabled={purchasing || isCompleted || !isConnected || !walletInfo}
                 className="w-full bg-gradient-to-r from-blue-500 to-cyan-500 text-white py-3 rounded-lg font-bold hover:from-blue-600 hover:to-cyan-600 transition disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105 active:scale-95 transform"
               >
                 {purchasing ? (
@@ -306,7 +328,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                     <span className="animate-spin">⏳</span>
                     Action en cours...
                   </span>
-                ) : isCompleted ? '✅ Événement Terminé' : !isConnected ? '🔒 Connectez votre wallet' : '💧 Lancer un Seau'}
+                ) : isCompleted ? '✅ Événement Terminé' : !isConnected || !walletInfo ? '🔒 Connectez votre wallet' : '💧 Lancer un Seau'}
               </button>
             </div>
 
@@ -344,7 +366,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
 
               <button
                 onClick={() => handlePurchase('premium')}
-                disabled={purchasing || isCompleted || !isConnected}
+                disabled={purchasing || isCompleted || !isConnected || !walletInfo}
                 className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-3 rounded-lg font-bold hover:from-purple-600 hover:to-pink-600 transition disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:scale-105 active:scale-95 transform"
               >
                 {purchasing ? (
@@ -352,7 +374,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                     <span className="animate-spin">⏳</span>
                     Action en cours...
                   </span>
-                ) : isCompleted ? '✅ Événement Terminé' : !isConnected ? '🔒 Connectez votre wallet' : '✈️ Appeler le Canadair'}
+                ) : isCompleted ? '✅ Événement Terminé' : !isConnected || !walletInfo ? '🔒 Connectez votre wallet' : '✈️ Appeler le Canadair'}
               </button>
             </div>
           </div>

@@ -4,7 +4,14 @@ import { prisma } from '@/lib/prisma';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { walletAddress, packType, amount, txHash, eventId } = body;
+    const { 
+      walletAddress, 
+      packType, 
+      amount, 
+      txHash, 
+      eventId,
+      paymentTxHash,  // Hash de la transaction déjà signée côté client
+    } = body;
 
     if (!walletAddress || !packType || !amount) {
       return NextResponse.json(
@@ -46,6 +53,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Récupérer l'association qui a créé l'événement
+    let associationWalletAddress = null;
+    if (event.associationId) {
+      const association = await prisma.association.findUnique({
+        where: { id: event.associationId },
+        select: { walletAddress: true, name: true },
+      });
+      
+      if (!association || !association.walletAddress) {
+        return NextResponse.json(
+          { error: 'L\'association n\'a pas configuré son adresse wallet' },
+          { status: 400 }
+        );
+      }
+      
+      associationWalletAddress = association.walletAddress;
+    } else {
+      return NextResponse.json(
+        { error: 'Événement sans association' },
+        { status: 400 }
+      );
+    }
+
     // Calculer les dégâts et tickets selon le pack
     let damage = 0;
     let tickets = 0;
@@ -58,18 +88,51 @@ export async function POST(request: NextRequest) {
       tickets = 5;
     }
 
-    // Créer la contribution
+    // Utiliser le txHash de la transaction déjà signée côté client
+    const txHashReal = paymentTxHash || txHash;
+    
+    if (!txHashReal) {
+      return NextResponse.json(
+        { error: 'Transaction hash manquant. La transaction doit être signée côté client.' },
+        { status: 400 }
+      );
+    }
+
+    // Créer la contribution avec le txHash réel
     const contribution = await prisma.eventContribution.create({
       data: {
         eventId: event.id,
         walletAddress,
         packType,
-        amount,
+        amount: parseFloat(amount.toString()),
         damage: Math.floor(damage),
         tickets,
-        txHash,
+        txHash: txHashReal,
       },
     });
+
+    // Enregistrer l'événement blockchain
+    if (txHashReal) {
+      await prisma.blockchainEvent.create({
+        data: {
+          type: 'event_contribution',
+          txHash: txHashReal,
+          eventId: event.id,
+          eventContributionId: contribution.id,
+          status: 'confirmed',
+          confirmedAt: new Date(),
+          metadata: JSON.stringify({
+            walletAddress,
+            amount: parseFloat(amount.toString()),
+            damage: Math.floor(damage),
+            tickets,
+            packType,
+            eventName: event.name,
+            associationWalletAddress,
+          }),
+        },
+      });
+    }
 
     // Mettre à jour la santé de l'événement
     const newHealth = Math.max(0, event.currentHealth - Math.floor(damage));
@@ -148,7 +211,10 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({
-      contribution,
+      contribution: {
+        ...contribution,
+        txHash: txHashReal || contribution.txHash, // Inclure le txHash réel
+      },
       event: {
         ...updatedEvent,
         healthPercentage: (updatedEvent.currentHealth / updatedEvent.maxHealth) * 100,
