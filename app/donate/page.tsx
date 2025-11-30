@@ -8,6 +8,8 @@ import { drawFromPack, simulate1000Draws } from "@/utils/packSystem";
 import { PACKS } from "@/utils/packsData";
 import GardenCanvas from "@/components/GardenCanvas";
 import DraggableItem from "@/components/DraggableItem";
+import CardReveal from "@/components/CardReveal";
+import PackOpening from "@/components/PackOpening";
 
 interface Association {
   id: string;
@@ -27,11 +29,17 @@ export default function DonatePage() {
   const [donating, setDonating] = useState(false);
   const [drawnItems, setDrawnItems] = useState<any[]>([]);
   const [showRewards, setShowRewards] = useState(false);
+  const [showCardReveal, setShowCardReveal] = useState(false);
+  const [showPackOpening, setShowPackOpening] = useState(false);
   const [villageItems, setVillageItems] = useState<any[]>([]);
+  const [dragQuantities, setDragQuantities] = useState<Record<string, number>>({});
+  const [activeEvent, setActiveEvent] = useState<any>(null);
+  const [eventProgress, setEventProgress] = useState(0);
 
   useEffect(() => {
     fetchAssociations();
     loadVillageItems();
+    loadActiveEvent();
   }, []);
 
   const fetchAssociations = async () => {
@@ -50,6 +58,18 @@ export default function DonatePage() {
     const saved = localStorage.getItem("villageItems");
     if (saved) {
       setVillageItems(JSON.parse(saved));
+    }
+  };
+
+  const loadActiveEvent = () => {
+    const saved = localStorage.getItem("participatingEvent");
+    if (saved) {
+      const eventData = JSON.parse(saved);
+      setActiveEvent(eventData);
+      // Calculer la progression basée sur le nombre de sceaux d'eau UTILISÉS (pas ceux dans l'inventaire)
+      const usedBuckets = eventData.usedBuckets || 0;
+      const totalNeeded = eventData.totalNeeded || 100;
+      setEventProgress(Math.min(100, (usedBuckets / totalNeeded) * 100));
     }
   };
 
@@ -124,7 +144,8 @@ export default function DonatePage() {
       const numDraws = calculateDraws(amount);
 
       // Effectuer les tirages
-      const pack = PACKS.pack_nature_basic; // Pack par défaut
+      // Si un événement est actif, donner des sceaux d'eau, sinon des objets normaux
+      const pack = activeEvent ? PACKS.pack_fire_event : PACKS.pack_nature_basic;
       const items = [];
       for (let i = 0; i < numDraws; i++) {
         const item = drawFromPack(pack);
@@ -137,7 +158,8 @@ export default function DonatePage() {
       const newVillageItems = [...villageItems, ...items];
       saveVillageItems(newVillageItems);
 
-      setShowRewards(true);
+      // Montrer l'ouverture du pack d'abord
+      setShowPackOpening(true);
       setDonationAmount("");
     } catch (error: any) {
       console.error("Erreur:", error);
@@ -188,13 +210,92 @@ export default function DonatePage() {
               {/* Zone du village avec drag & drop */}
               <div className="relative rounded-xl overflow-hidden border-4 border-green-300">
                 <GardenCanvas 
-                  onItemPlaced={(itemId) => {
-                    // Retirer un exemplaire de cet item de l'inventaire
-                    const itemIndex = villageItems.findIndex(item => item.id === itemId);
-                    if (itemIndex !== -1) {
-                      const newItems = [...villageItems];
-                      newItems.splice(itemIndex, 1);
-                      saveVillageItems(newItems);
+                  hasItems={villageItems.length > 0}
+                  backgroundImage={activeEvent ? "/images/biome_en_feu.png.webp" : "/village.png"}
+                  eventProgress={activeEvent ? eventProgress : undefined}
+                  usedBuckets={activeEvent ? (activeEvent.usedBuckets || 0) : 0}
+                  totalNeeded={activeEvent ? (activeEvent.totalNeeded || 20) : 20}
+                  onItemPlaced={(itemId, quantity) => {
+                    // Si c'est un seau d'eau et qu'il y a un événement actif
+                    if (itemId === "water_bucket" && activeEvent) {
+                      const newEvent = { ...activeEvent };
+                      const previousBuckets = newEvent.usedBuckets || 0;
+                      newEvent.usedBuckets = previousBuckets + quantity;
+                      const totalNeeded = newEvent.totalNeeded || 20; // 20 sceaux pour atteindre 100%
+                      const newProgress = Math.min(100, (newEvent.usedBuckets / totalNeeded) * 100);
+                      
+                      console.log(`🔥 Drop de ${quantity} sceaux`);
+                      console.log(`🔥 Progression: ${previousBuckets} → ${newEvent.usedBuckets} sceaux (${newProgress.toFixed(1)}%)`);
+                      
+                      // Mettre à jour l'état local ET le localStorage
+                      setActiveEvent(newEvent);
+                      setEventProgress(newProgress);
+                      localStorage.setItem("participatingEvent", JSON.stringify(newEvent));
+                      
+                      // Si l'événement est terminé
+                      if (newProgress >= 100) {
+                        setTimeout(() => {
+                          // Afficher un modal de victoire
+                          const victoryModal = document.createElement('div');
+                          victoryModal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.8);display:flex;align-items:center;justify-content:center;z-index:9999;animation:fadeIn 0.5s';
+                          victoryModal.innerHTML = `
+                            <div style="background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);padding:3rem;border-radius:2rem;text-align:center;max-width:500px;box-shadow:0 20px 60px rgba(0,0,0,0.5);animation:scaleIn 0.5s">
+                              <div style="font-size:5rem;margin-bottom:1rem;animation:bounce 1s infinite">🎉</div>
+                              <h2 style="font-size:2.5rem;font-weight:bold;color:white;margin-bottom:1rem">Victoire !</h2>
+                              <p style="font-size:1.25rem;color:rgba(255,255,255,0.9);margin-bottom:1.5rem">
+                                Tu as éteint l'incendie avec <strong>${newEvent.usedBuckets}</strong> sceaux d'eau !<br/>
+                                Le village est sauvé ! 🌳
+                              </p>
+                              <p style="font-size:1rem;color:rgba(255,255,255,0.8);margin-bottom:2rem">
+                                Ton courage a permis de préserver l'écosystème.<br/>
+                                Les habitants te remercient ! 🙏
+                              </p>
+                              <button onclick="this.parentElement.parentElement.remove();window.location.reload()" 
+                                style="background:white;color:#667eea;padding:1rem 2rem;border:none;border-radius:1rem;font-size:1.125rem;font-weight:bold;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.3)">
+                                Retour au village
+                              </button>
+                            </div>
+                            <style>
+                              @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+                              @keyframes scaleIn { from { transform: scale(0.8); } to { transform: scale(1); } }
+                              @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-20px); } }
+                            </style>
+                          `;
+                          document.body.appendChild(victoryModal);
+                          
+                          localStorage.removeItem("participatingEvent");
+                          setActiveEvent(null);
+                          setEventProgress(0);
+                        }, 500);
+                      }
+                    }
+                    
+                    // Retirer la quantité placée de l'inventaire
+                    const newItems = [...villageItems];
+                    let removed = 0;
+                    
+                    for (let i = newItems.length - 1; i >= 0 && removed < quantity; i--) {
+                      if (newItems[i].id === itemId) {
+                        newItems.splice(i, 1);
+                        removed++;
+                      }
+                    }
+                    
+                    saveVillageItems(newItems);
+                    
+                    // Réinitialiser ou ajuster la quantité de drag
+                    const remaining = newItems.filter(i => i.id === itemId).length;
+                    if (remaining === 0) {
+                      setDragQuantities(prev => {
+                        const copy = { ...prev };
+                        delete copy[itemId];
+                        return copy;
+                      });
+                    } else if (dragQuantities[itemId] > remaining) {
+                      setDragQuantities(prev => ({
+                        ...prev,
+                        [itemId]: remaining
+                      }));
                     }
                   }}
                 />
@@ -226,9 +327,15 @@ export default function DonatePage() {
                   </div>
                 </div>
                 {villageItems.length === 0 ? (
-                  <p className="text-sm text-gray-500 text-center py-4">
-                    Faites un don pour gagner des objets !
-                  </p>
+                  <div className="text-center py-8">
+                    <div className="text-5xl mb-4">🎁</div>
+                    <p className="text-lg font-semibold text-gray-700 mb-2">
+                      Tu n&apos;as encore aucun objet.
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      Fais ton premier don pour débloquer ton tout premier élément du village !
+                    </p>
+                  </div>
                 ) : (
                   <div className="flex flex-wrap gap-4">
                     {Array.from(new Set(villageItems.map((i) => i.id))).map(
@@ -238,15 +345,28 @@ export default function DonatePage() {
                         const count = villageItems.filter(
                           (i) => i.id === id
                         ).length;
+                        const currentQuantity = dragQuantities[id] || 1;
+                        
                         return (
                           <div key={idx} className="flex flex-col items-center">
-                            <DraggableItem item={item} width={64} />
+                            <DraggableItem 
+                              item={item} 
+                              width={64}
+                              quantity={Math.min(currentQuantity, count)}
+                              onQuantityChange={(delta) => {
+                                const newQuantity = Math.max(1, Math.min(count, currentQuantity + delta));
+                                setDragQuantities(prev => ({
+                                  ...prev,
+                                  [id]: newQuantity
+                                }));
+                              }}
+                            />
                             <span
                               className={`mt-1 px-2 py-0.5 rounded text-xs font-medium ${getRarityColor(
                                 item.rarity || "COMMON"
                               )}`}
                             >
-                              x{count}
+                              Total: x{count}
                             </span>
                           </div>
                         );
@@ -414,10 +534,32 @@ export default function DonatePage() {
         </div>
       </div>
 
-      {/* Modal de récompenses */}
-      {showRewards && (
+      {/* Ouverture du pack */}
+      {showPackOpening && (
+        <PackOpening
+          packType={activeEvent ? "fire" : "nature"}
+          onComplete={() => {
+            setShowPackOpening(false);
+            setShowCardReveal(true);
+          }}
+        />
+      )}
+
+      {/* Révélation des cartes */}
+      {showCardReveal && (
+        <CardReveal
+          items={drawnItems}
+          onComplete={() => {
+            setShowCardReveal(false);
+            setShowRewards(true);
+          }}
+        />
+      )}
+
+      {/* Modal récapitulatif après les cartes */}
+      {showRewards && !showCardReveal && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl p-8 max-w-2xl w-full">
+          <div className="bg-white rounded-2xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="text-center mb-6">
               <div className="text-6xl mb-4">🎉</div>
               <h2 className="text-3xl font-bold text-gray-900 mb-2">
@@ -443,13 +585,15 @@ export default function DonatePage() {
                   }`}
                 >
                   <div className="text-4xl mb-2">
-                    {item.rarity === "LEGENDARY"
-                      ? "⭐"
-                      : item.rarity === "EPIC"
-                      ? "💎"
-                      : item.rarity === "RARE"
-                      ? "🌟"
-                      : "🌱"}
+                    {item.id === "water_bucket" ? "💧" :
+                     item.id === "beehive" ? "🐝" :
+                     item.id === "world_tree" ? "🔥" :
+                     item.id === "tree_small" ? "🌲" :
+                     item.id === "rock" ? "🪨" :
+                     item.id === "flower" ? "🌸" :
+                     item.rarity === "LEGENDARY" ? "⭐" :
+                     item.rarity === "EPIC" ? "💎" :
+                     item.rarity === "RARE" ? "🌟" : "🌱"}
                   </div>
                   <div className="font-bold text-gray-900 text-sm mb-1">
                     {item.name}
@@ -468,6 +612,7 @@ export default function DonatePage() {
             <button
               onClick={() => {
                 setShowRewards(false);
+                setShowCardReveal(false);
                 setDrawnItems([]);
               }}
               className="w-full py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg font-bold hover:from-green-700 hover:to-emerald-700 transition"

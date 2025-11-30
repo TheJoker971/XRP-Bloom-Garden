@@ -2,21 +2,49 @@ import { Pack, Rarity, PackItem } from "./gameModels";
 
 // Items Nature
 const NATURE_ITEMS: PackItem[] = [
-  { id: "tree_small", name: "Jeune Arbre", rarity: Rarity.COMMON, imageUrl: "/images/pine.png" },
-  { id: "bush", name: "Buisson", rarity: Rarity.COMMON },
-  { id: "rock", name: "Rocher", rarity: Rarity.COMMON },
-  { id: "flower", name: "Fleurs", rarity: Rarity.COMMON },
-  { id: "tree_large", name: "Chêne Centenaire", rarity: Rarity.RARE },
+  { 
+    id: "tree_small", 
+    name: "Jeune Arbre", 
+    rarity: Rarity.COMMON, 
+    imageUrl: "/images/pine.png",
+    cardImageUrl: "/images/Pine_tree_card.png"
+  },
+  { 
+    id: "rock", 
+    name: "Rocher", 
+    rarity: Rarity.COMMON,
+    imageUrl: "/images/rock.png"
+  },
+  { 
+    id: "flower", 
+    name: "Fleurs", 
+    rarity: Rarity.COMMON,
+    imageUrl: "/images/flower.png"
+  },
   {
     id: "beehive",
     name: "Ruche à Abeilles",
     rarity: Rarity.RARE,
     imageUrl: "/images/beehive.png",
+    cardImageUrl: "/images/Beehive_card.png"
   },
-  { id: "fountain", name: "Fontaine", rarity: Rarity.RARE },
-  { id: "wind_turbine", name: "Éolienne", rarity: Rarity.EPIC },
-  { id: "eco_sanctuary", name: "Sanctuaire Écologique", rarity: Rarity.EPIC },
-  { id: "world_tree", name: "Arbre-Monde", rarity: Rarity.LEGENDARY, imageUrl: "/images/phoenix_tree.png" },
+  { 
+    id: "world_tree", 
+    name: "Phoenix Tree", 
+    rarity: Rarity.LEGENDARY, 
+    imageUrl: "/images/phoenix_tree.png",
+    cardImageUrl: "/images/phoenix_card.png"
+  },
+];
+
+// Items Événement Feu
+const FIRE_EVENT_ITEMS: PackItem[] = [
+  {
+    id: "water_bucket",
+    name: "Seau d'Eau",
+    rarity: Rarity.COMMON,
+    imageUrl: "/images/sceau_eau.png"
+  },
 ];
 
 // Packs
@@ -48,5 +76,19 @@ export const PACKS: Record<string, Pack> = {
       [Rarity.LEGENDARY]: 10,
     },
     pool: NATURE_ITEMS,
+  },
+  pack_fire_event: {
+    id: "pack_fire_event",
+    name: "Pack Événement Incendie",
+    description: "Sceaux d'eau pour éteindre l'incendie",
+    price: 5,
+    category: "event",
+    probabilities: {
+      [Rarity.COMMON]: 100,
+      [Rarity.RARE]: 0,
+      [Rarity.EPIC]: 0,
+      [Rarity.LEGENDARY]: 0,
+    },
+    pool: FIRE_EVENT_ITEMS,
   },
 };

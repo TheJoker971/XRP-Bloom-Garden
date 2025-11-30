@@ -261,6 +261,27 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
           )}
         </div>
 
+        {/* Bouton pour activer l'événement dans le village */}
+        <div className="mb-8 text-center">
+          <button
+            onClick={() => {
+              localStorage.setItem("participatingEvent", JSON.stringify({
+                id: event.id,
+                name: event.name,
+                usedBuckets: 0,
+                totalNeeded: 20
+              }));
+              alert("🔥 L'événement incendie est maintenant actif dans ton village ! Va sur la page 'Faire un don' pour obtenir des sceaux d'eau et éteindre l'incendie (20 sceaux nécessaires).");
+            }}
+            className="px-8 py-4 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-2xl font-bold text-lg hover:from-orange-700 hover:to-red-700 transition shadow-xl hover:shadow-2xl hover:scale-105 transform"
+          >
+            🏡 Activer l'événement dans mon village
+          </button>
+          <p className="text-sm text-gray-600 mt-2">
+            Ton village passera en mode incendie. Utilise des sceaux d'eau pour éteindre le feu !
+          </p>
+        </div>
+
         <div className="grid lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-4">
             <h2 className="text-3xl font-bold text-gray-800 mb-4">Combattez l'Incendie !</h2>

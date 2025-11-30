@@ -24,9 +24,12 @@ export default function Home() {
             et recevez des dons en XRP pour un impact social et environnemental durable.
           </p>
           <div className="flex flex-wrap justify-center gap-4">
-            <button className="px-8 py-4 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg shadow-md hover:shadow-lg transition-all transform hover:-translate-y-0.5">
+            <Link 
+              href="/onboarding"
+              className="px-8 py-4 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg shadow-md hover:shadow-lg transition-all transform hover:-translate-y-0.5"
+            >
               Commencer maintenant
-            </button>
+            </Link>
             <button className="px-8 py-4 border-2 border-green-600 text-green-600 hover:bg-green-50 font-semibold rounded-lg transition-all">
               En savoir plus
             </button>
@@ -115,6 +118,12 @@ export default function Home() {
             Rejoignez notre communauté et contribuez à un avenir plus durable et solidaire.
           </p>
           <div className="flex flex-wrap justify-center gap-4">
+            <Link 
+              href="/onboarding" 
+              className="px-8 py-4 bg-gradient-to-r from-green-500 to-sky-500 text-white font-semibold rounded-lg shadow-md hover:shadow-lg transition-all"
+            >
+              🌱 Commencer
+            </Link>
             <Link 
               href="/donate" 
               className="px-8 py-4 bg-gradient-to-r from-green-500 to-sky-500 text-white font-semibold rounded-lg shadow-md hover:shadow-lg transition-all"
