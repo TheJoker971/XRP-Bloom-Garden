@@ -4,8 +4,6 @@ import { useState, useEffect } from 'react';
 import { Header } from '@/components/Header';
 import { useXRPLWallet } from '@/components/providers/XRPLWalletProvider';
 import { Heart, Gift, Sparkles, ChevronRight } from 'lucide-react';
-import { drawFromPack, simulate1000Draws } from '@/utils/packSystem';
-import { PACKS } from '@/utils/packsData';
 
 interface Association {
   id: string;
@@ -16,7 +14,7 @@ interface Association {
 }
 
 export default function DonatePage() {
-  const { isConnected, walletInfo } = useXRPLWallet();
+  const { isConnected, walletInfo, walletType } = useXRPLWallet();
   const [associations, setAssociations] = useState<Association[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedAssociation, setSelectedAssociation] = useState<Association | null>(null);
@@ -25,17 +23,40 @@ export default function DonatePage() {
   const [drawnItems, setDrawnItems] = useState<any[]>([]);
   const [showRewards, setShowRewards] = useState(false);
   const [villageItems, setVillageItems] = useState<any[]>([]);
+  const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
     fetchAssociations();
     loadVillageItems();
+    fetchUser();
   }, []);
+
+  const fetchUser = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (token) {
+        const response = await fetch('/api/auth/me', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await response.json();
+        if (data.user) {
+          setUser(data.user);
+        }
+      }
+    } catch (error) {
+      console.error('Erreur lors de la récupération de l\'utilisateur:', error);
+    }
+  };
 
   const fetchAssociations = async () => {
     try {
       const response = await fetch('/api/associations/approved');
       const data = await response.json();
-      setAssociations(data.associations || []);
+      // Filtrer côté client aussi pour être sûr (seulement celles avec walletAddress)
+      const associationsWithWallet = (data.associations || []).filter(
+        (assoc: Association) => assoc.walletAddress && assoc.walletAddress.trim() !== ''
+      );
+      setAssociations(associationsWithWallet);
     } catch (error) {
       console.error('Erreur:', error);
     } finally {
@@ -84,7 +105,12 @@ export default function DonatePage() {
 
   const handleDonate = async () => {
     if (!isConnected || !walletInfo || !selectedAssociation || !donationAmount) {
-      alert('Veuillez remplir tous les champs');
+      alert('Veuillez remplir tous les champs et connecter votre wallet');
+      return;
+    }
+
+    if (!selectedAssociation.walletAddress) {
+      alert('Cette association n\'a pas configuré son adresse wallet');
       return;
     }
 
@@ -97,28 +123,61 @@ export default function DonatePage() {
     setDonating(true);
 
     try {
-      // Simuler la transaction (en production, utiliser le vrai wallet)
-      await new Promise(resolve => setTimeout(resolve, 1500));
-
-      // Calculer le nombre de tirages
-      const numDraws = calculateDraws(amount);
+      // 1. Envoyer le paiement XRPL réel
+      const { sendPaymentWithWallet } = await import('@/lib/xrpl-client-service-v2');
       
-      // Effectuer les tirages
-      const pack = PACKS.pack_nature_basic; // Pack par défaut
-      const items = [];
-      for (let i = 0; i < numDraws; i++) {
-        const item = drawFromPack(pack);
-        items.push(item);
+      // Utiliser le type de wallet connecté (gem, xaman, crossmark)
+      const currentWalletType = walletType || 'gem'; // Par défaut GemWallet si non défini
+      
+      const paymentResult = await sendPaymentWithWallet(
+        currentWalletType,
+        {
+          fromAddress: walletInfo.address,
+          toAddress: selectedAssociation.walletAddress,
+          amount,
+          memo: `Don à ${selectedAssociation.name}`,
+          eventMetadata: {
+            type: 'donation',
+            associationName: selectedAssociation.name,
+            amount,
+          },
+        }
+      );
+
+      // 2. Envoyer le txHash à l'API pour enregistrer le don et créer les NFTs
+      const response = await fetch('/api/donations/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          walletAddress: walletInfo.address,
+          associationWalletAddress: selectedAssociation.walletAddress,
+          amount,
+          paymentTxHash: paymentResult.txHash,
+          userId: user?.id,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Erreur lors du don');
       }
 
+      // Les items sont maintenant des NFTs réels avec leurs TokenIDs
+      const items = data.items.map((item: any) => ({
+        name: item.itemName,
+        rarity: item.rarity,
+        type: item.itemType,
+        nftTokenId: item.nftTokenId,
+      }));
+
       setDrawnItems(items);
-      
-      // Ajouter les items au village
       const newVillageItems = [...villageItems, ...items];
       saveVillageItems(newVillageItems);
-      
       setShowRewards(true);
       setDonationAmount('');
+      
+      alert(`Don de ${amount} XRP envoyé avec succès ! Transaction: ${paymentResult.txHash}`);
     } catch (error: any) {
       console.error('Erreur:', error);
       alert(error.message || 'Erreur lors du don');
@@ -248,7 +307,13 @@ export default function DonatePage() {
                   </div>
                 </div>
 
-                {!isConnected ? (
+                {!selectedAssociation.walletAddress ? (
+                  <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200 text-center">
+                    <p className="text-yellow-800 font-medium">
+                      Cette association n'a pas configuré son adresse wallet
+                    </p>
+                  </div>
+                ) : !isConnected || !walletInfo ? (
                   <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200 text-center">
                     <p className="text-yellow-800 font-medium">
                       Connectez votre wallet pour faire un don

@@ -92,22 +92,22 @@ export function Header() {
                 Accueil
               </Link>
               <Link
-                href="/draw"
+                href="/donate"
                 className="text-gray-700 hover:text-green-600 font-medium transition-colors text-sm"
               >
-                Tirage
+                Faire un don
               </Link>
               <Link
-                href="/event"
+                href="/events"
                 className="text-gray-700 hover:text-orange-600 font-medium transition-colors flex items-center gap-1 text-sm"
               >
                 🔥 Événement
               </Link>
               <Link
-                href="/charte"
+                href="/partnership"
                 className="text-gray-700 hover:text-sky-600 font-medium transition-colors text-sm"
               >
-                Charte
+                Partenaire
               </Link>
             </nav>
 
@@ -182,10 +182,10 @@ export function Header() {
             {/* Section Wallet XRPL */}
             <div className="flex items-center gap-2">
               {isWalletConnected && walletInfo && balance && (
-                <div className="hidden lg:flex items-center gap-2 px-3 py-2 bg-white rounded-lg border border-green-200 shadow-sm">
+                <div className="flex items-center gap-2 px-3 py-2 bg-white rounded-lg border border-green-200 shadow-sm">
                   <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                   <div className="flex flex-col">
-                    <span className="text-xs text-gray-500">Wallet XRPL</span>
+                    <span className="text-xs text-gray-500 hidden sm:block">Wallet XRPL</span>
                     <span className="text-sm font-semibold text-green-600">
                       {formatBalance(balance)} XRP
                     </span>

@@ -4,7 +4,6 @@ import { useState, useEffect, use } from 'react';
 import { Header } from '@/components/Header';
 import { useXRPLWallet } from '@/components/providers/XRPLWalletProvider';
 import { Flame, Droplet, Trophy, Zap, Users } from 'lucide-react';
-import { Client, Payment } from 'xrpl';
 
 interface EventData {
   event: {
@@ -16,6 +15,7 @@ interface EventData {
     multiplier: number;
     healthPercentage: number;
     status: string;
+    associationWalletAddress?: string | null;
   } | null;
   leaderboard: Array<{
     walletAddress: string;
@@ -28,12 +28,12 @@ interface EventData {
 
 export default function EventDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
-  const { isConnected, walletInfo } = useXRPLWallet();
+  const { isConnected, walletInfo, walletType } = useXRPLWallet();
   const [eventData, setEventData] = useState<EventData | null>(null);
   const [loading, setLoading] = useState(true);
   const [purchasing, setPurchasing] = useState(false);
   const [showVictory, setShowVictory] = useState(false);
-  const [showCrisisPopup, setShowCrisisPopup] = useState(true);
+  const [showCrisisPopup, setShowCrisisPopup] = useState(false);
   const [lastDamage, setLastDamage] = useState<number | null>(null);
   const [notification, setNotification] = useState<string | null>(null);
   const [damageHistory, setDamageHistory] = useState<Array<{damage: number, timestamp: number}>>([]);
@@ -46,13 +46,18 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
   }, [resolvedParams.id]);
 
   useEffect(() => {
-    // Réafficher la popup de crise si l'événement est actif
+    // Afficher la popup de crise uniquement au premier chargement si l'événement est actif
+    // et si l'utilisateur ne l'a pas déjà fermée pour cet événement
     if (eventData?.event && eventData.event.status === 'active') {
-      setShowCrisisPopup(true);
+      const popupClosedKey = `crisis_popup_closed_${resolvedParams.id}`;
+      const wasClosed = localStorage.getItem(popupClosedKey);
+      if (!wasClosed) {
+        setShowCrisisPopup(true);
+      }
     } else {
       setShowCrisisPopup(false);
     }
-  }, [eventData]);
+  }, [eventData, resolvedParams.id]);
 
   const fetchEventData = async () => {
     try {
@@ -72,18 +77,41 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
       return;
     }
 
+    if (!eventData?.event?.associationWalletAddress) {
+      alert('L\'association n\'a pas configuré son adresse wallet');
+      return;
+    }
+
     setPurchasing(true);
     setLastDamage(null);
 
+    const amount = packType === 'basic' ? 5 : 20;
+
     try {
-      const amount = packType === 'basic' ? 5 : 20;
-      const associationAddress = 'rN7n7otQDd6FczFgLdSqtcsAUxDkw6fzRH';
+      // 1. Envoyer le paiement XRPL réel
+      const { sendPaymentWithWallet } = await import('@/lib/xrpl-client-service-v2');
+      
+      // Utiliser le type de wallet connecté (gem, xaman, crossmark)
+      const currentWalletType = walletType || 'gem'; // Par défaut GemWallet si non défini
+      
+      const paymentResult = await sendPaymentWithWallet(
+        currentWalletType,
+        {
+          fromAddress: walletInfo.address,
+          toAddress: eventData.event.associationWalletAddress,
+          amount,
+          memo: `Contribution à l'événement: ${eventData.event.name}`,
+          eventMetadata: {
+            type: 'event_contribution',
+            eventId: resolvedParams.id,
+            eventName: eventData.event.name,
+            packType,
+            amount,
+          },
+        }
+      );
 
-      const client = new Client('wss://s.altnet.rippletest.net:51233');
-      await client.connect();
-
-      const txHash = `demo_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-
+      // 2. Enregistrer la contribution
       const response = await fetch('/api/events/contribute', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -92,7 +120,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
           walletAddress: walletInfo.address,
           packType,
           amount,
-          txHash,
+          paymentTxHash: paymentResult.txHash,
         }),
       });
 
@@ -131,7 +159,6 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
       }
 
       await fetchEventData();
-      await client.disconnect();
     } catch (error: any) {
       console.error('Erreur:', error);
       alert(error.message || 'Erreur lors de l\'achat');
@@ -293,7 +320,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
 
               <button
                 onClick={() => handlePurchase('basic')}
-                disabled={purchasing || isCompleted || !isConnected}
+                disabled={purchasing || isCompleted || !isConnected || !walletInfo}
                 className="w-full bg-gradient-to-r from-blue-500 to-cyan-500 text-white py-3 rounded-lg font-bold hover:from-blue-600 hover:to-cyan-600 transition disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105 active:scale-95 transform"
               >
                 {purchasing ? (
@@ -301,7 +328,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                     <span className="animate-spin">⏳</span>
                     Action en cours...
                   </span>
-                ) : isCompleted ? '✅ Événement Terminé' : !isConnected ? '🔒 Connectez votre wallet' : '💧 Lancer un Seau'}
+                ) : isCompleted ? '✅ Événement Terminé' : !isConnected || !walletInfo ? '🔒 Connectez votre wallet' : '💧 Lancer un Seau'}
               </button>
             </div>
 
@@ -339,7 +366,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
 
               <button
                 onClick={() => handlePurchase('premium')}
-                disabled={purchasing || isCompleted || !isConnected}
+                disabled={purchasing || isCompleted || !isConnected || !walletInfo}
                 className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-3 rounded-lg font-bold hover:from-purple-600 hover:to-pink-600 transition disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:scale-105 active:scale-95 transform"
               >
                 {purchasing ? (
@@ -347,7 +374,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                     <span className="animate-spin">⏳</span>
                     Action en cours...
                   </span>
-                ) : isCompleted ? '✅ Événement Terminé' : !isConnected ? '🔒 Connectez votre wallet' : '✈️ Appeler le Canadair'}
+                ) : isCompleted ? '✅ Événement Terminé' : !isConnected || !walletInfo ? '🔒 Connectez votre wallet' : '✈️ Appeler le Canadair'}
               </button>
             </div>
           </div>
@@ -408,8 +435,24 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
       </div>
 
       {showCrisisPopup && isCrisis && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-          <div className="bg-gradient-to-br from-orange-50 to-red-50 rounded-2xl p-8 max-w-2xl w-full border-4 border-orange-500 shadow-2xl animate-pulse-slow">
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[100] p-4 backdrop-blur-sm overflow-y-auto">
+          {/* Images du pompier de chaque côté - à l'extérieur de la popup */}
+          <div className="absolute left-8 top-1/2 -translate-y-1/2 hidden lg:block z-[101] pointer-events-none">
+            <img 
+              src="/pompier.png" 
+              alt="Pompier" 
+              className="w-40 h-40 object-contain animate-bounce"
+            />
+          </div>
+          <div className="absolute right-8 top-1/2 -translate-y-1/2 hidden lg:block z-[101] pointer-events-none">
+            <img 
+              src="/pompier.png" 
+              alt="Pompier" 
+              className="w-40 h-40 object-contain animate-bounce scale-x-[-1]"
+            />
+          </div>
+          
+          <div className="bg-gradient-to-br from-orange-50 to-red-50 rounded-2xl p-8 max-w-2xl w-full border-4 border-orange-500 shadow-2xl animate-pulse-slow relative z-[102] my-auto">
             <div className="text-center mb-6">
               <div className="flex items-center justify-center gap-4 mb-4">
                 <Flame className="w-16 h-16 text-orange-600 animate-bounce" />
@@ -442,7 +485,12 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
               </div>
 
               <button
-                onClick={() => setShowCrisisPopup(false)}
+                onClick={() => {
+                  setShowCrisisPopup(false);
+                  // Mémoriser que l'utilisateur a fermé la popup pour cet événement
+                  const popupClosedKey = `crisis_popup_closed_${resolvedParams.id}`;
+                  localStorage.setItem(popupClosedKey, 'true');
+                }}
                 className="w-full px-8 py-4 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-xl font-bold text-xl hover:from-orange-700 hover:to-red-700 transition shadow-lg"
               >
                 🚨 Rejoindre la lutte !
