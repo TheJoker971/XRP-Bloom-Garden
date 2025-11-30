@@ -1,14 +1,19 @@
 import React from "react";
 import { PackItem } from "../utils/gameModels";
 
-type Props = { 
-  item: PackItem; 
+type Props = {
+  item: PackItem;
   width?: number;
   quantity?: number;
   onQuantityChange?: (delta: number) => void;
 };
 
-export default function DraggableItem({ item, width = 64, quantity = 1, onQuantityChange }: Props) {
+export default function DraggableItem({
+  item,
+  width = 64,
+  quantity = 1,
+  onQuantityChange,
+}: Props) {
   const imgRef = React.useRef<HTMLImageElement>(null);
 
   function onDragStart(e: React.DragEvent) {
@@ -49,7 +54,13 @@ export default function DraggableItem({ item, width = 64, quantity = 1, onQuanti
   };
 
   return (
-    <div style={{ display: "inline-block", textAlign: "center", position: "relative" }}>
+    <div
+      style={{
+        display: "inline-block",
+        textAlign: "center",
+        position: "relative",
+      }}
+    >
       {item.imageUrl ? (
         <div
           draggable
@@ -68,24 +79,26 @@ export default function DraggableItem({ item, width = 64, quantity = 1, onQuanti
           />
           {/* Badge de quantité */}
           {quantity > 1 && (
-            <div style={{
-              position: "absolute",
-              top: -8,
-              right: -8,
-              background: "#ef4444",
-              color: "white",
-              borderRadius: "50%",
-              width: 24,
-              height: 24,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: "0.75rem",
-              fontWeight: "bold",
-              border: "2px solid white",
-              boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
-              pointerEvents: "none",
-            }}>
+            <div
+              style={{
+                position: "absolute",
+                top: -8,
+                right: -8,
+                background: "#ef4444",
+                color: "white",
+                borderRadius: "50%",
+                width: 24,
+                height: 24,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: "0.75rem",
+                fontWeight: "bold",
+                border: "2px solid white",
+                boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
+                pointerEvents: "none",
+              }}
+            >
               {quantity}
             </div>
           )}
@@ -111,39 +124,43 @@ export default function DraggableItem({ item, width = 64, quantity = 1, onQuanti
           {getItemEmoji(item.id)}
           {/* Badge de quantité */}
           {quantity > 1 && (
-            <div style={{
-              position: "absolute",
-              top: -8,
-              right: -8,
-              background: "#ef4444",
-              color: "white",
-              borderRadius: "50%",
-              width: 24,
-              height: 24,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: "0.75rem",
-              fontWeight: "bold",
-              border: "2px solid white",
-              boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
-            }}>
+            <div
+              style={{
+                position: "absolute",
+                top: -8,
+                right: -8,
+                background: "#ef4444",
+                color: "white",
+                borderRadius: "50%",
+                width: 24,
+                height: 24,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: "0.75rem",
+                fontWeight: "bold",
+                border: "2px solid white",
+                boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
+              }}
+            >
               {quantity}
             </div>
           )}
         </div>
       )}
       <div style={{ fontSize: 12, marginTop: 4 }}>{item.name}</div>
-      
+
       {/* Contrôles de quantité */}
       {onQuantityChange && (
-        <div style={{ 
-          display: "flex", 
-          gap: 4, 
-          marginTop: 4, 
-          justifyContent: "center",
-          alignItems: "center" 
-        }}>
+        <div
+          style={{
+            display: "flex",
+            gap: 4,
+            marginTop: 4,
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+        >
           <button
             onClick={() => onQuantityChange(-1)}
             disabled={quantity <= 1}
@@ -165,12 +182,14 @@ export default function DraggableItem({ item, width = 64, quantity = 1, onQuanti
           >
             −
           </button>
-          <span style={{ 
-            fontSize: "0.875rem", 
-            fontWeight: "bold",
-            minWidth: 20,
-            textAlign: "center"
-          }}>
+          <span
+            style={{
+              fontSize: "0.875rem",
+              fontWeight: "bold",
+              minWidth: 20,
+              textAlign: "center",
+            }}
+          >
             {quantity}
           </span>
           <button

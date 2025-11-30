@@ -2,59 +2,59 @@ import { Pack, Rarity, PackItem } from "./gameModels";
 
 // Items Nature
 const NATURE_ITEMS: PackItem[] = [
-  { 
-    id: "tree_small", 
-    name: "Jeune Arbre", 
+  {
+    id: "tree_small",
+    name: "Jeune Arbre",
     rarity: Rarity.COMMON,
     imageUrl: "/images/pine.png",
-    cardImageUrl: "/images/Pine_tree_card.png"
+    cardImageUrl: "/images/Pine_tree_card.png",
   },
-  { 
-    id: "rock", 
-    name: "Rocher", 
+  {
+    id: "rock",
+    name: "Rocher",
     rarity: Rarity.COMMON,
-    imageUrl: "/images/rock.png"
+    imageUrl: "/images/rock.png",
   },
-  { 
-    id: "flower", 
-    name: "Fleurs", 
+  {
+    id: "flower",
+    name: "Fleurs",
     rarity: Rarity.COMMON,
-    imageUrl: "/images/flower.png"
+    imageUrl: "/images/flower.png",
   },
-  { 
-    id: "path", 
-    name: "Chemin", 
+  {
+    id: "path",
+    name: "Chemin",
     rarity: Rarity.COMMON,
     imageUrl: "/images/chemin.png",
-    cardImageUrl: "/images/chemin_card.png"
+    cardImageUrl: "/images/chemin_card.png",
   },
-  { 
-    id: "beehive", 
-    name: "Ruche à Abeilles", 
+  {
+    id: "beehive",
+    name: "Ruche à Abeilles",
     rarity: Rarity.RARE,
     imageUrl: "/images/beehive.png",
-    cardImageUrl: "/images/Beehive_card.png"
+    cardImageUrl: "/images/Beehive_card.png",
   },
-  { 
-    id: "cabin", 
-    name: "Cabane", 
+  {
+    id: "cabin",
+    name: "Cabane",
     rarity: Rarity.RARE,
     imageUrl: "/images/cabane.png",
-    cardImageUrl: "/images/cabane_card.png"
+    cardImageUrl: "/images/cabane_card.png",
   },
-  { 
-    id: "sanctuary", 
-    name: "Sanctuaire", 
+  {
+    id: "sanctuary",
+    name: "Sanctuaire",
     rarity: Rarity.EPIC,
     imageUrl: "/images/sanctuaire.png",
-    cardImageUrl: "/images/sanctuaire_card.png"
+    cardImageUrl: "/images/sanctuaire_card.png",
   },
-  { 
-    id: "world_tree", 
-    name: "Phoenix Tree", 
+  {
+    id: "world_tree",
+    name: "Phoenix Tree",
     rarity: Rarity.LEGENDARY,
     imageUrl: "/images/phoenix_tree.png",
-    cardImageUrl: "/images/phoenix_card.png"
+    cardImageUrl: "/images/phoenix_card.png",
   },
 ];
 

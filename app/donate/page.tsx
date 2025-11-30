@@ -33,7 +33,9 @@ export default function DonatePage() {
   const [showPackOpening, setShowPackOpening] = useState(false);
   const [villageItems, setVillageItems] = useState<any[]>([]);
   const [user, setUser] = useState<any>(null);
-  const [dragQuantities, setDragQuantities] = useState<Record<string, number>>({});
+  const [dragQuantities, setDragQuantities] = useState<Record<string, number>>(
+    {}
+  );
   const [activeEvent, setActiveEvent] = useState<any>(null);
   const [eventProgress, setEventProgress] = useState(0);
 
@@ -46,9 +48,9 @@ export default function DonatePage() {
 
   const fetchUser = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem("token");
       if (token) {
-        const response = await fetch('/api/auth/me', {
+        const response = await fetch("/api/auth/me", {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await response.json();
@@ -57,7 +59,7 @@ export default function DonatePage() {
         }
       }
     } catch (error) {
-      console.error('Erreur lors de la récupération de l\'utilisateur:', error);
+      console.error("Erreur lors de la récupération de l'utilisateur:", error);
     }
   };
 
@@ -67,10 +69,11 @@ export default function DonatePage() {
       const data = await response.json();
       // Filtrer côté client aussi pour être sûr (seulement celles avec walletAddress)
       const associationsWithWallet = (data.associations || []).filter(
-        (assoc: Association) => assoc.walletAddress && assoc.walletAddress.trim() !== ''
+        (assoc: Association) =>
+          assoc.walletAddress && assoc.walletAddress.trim() !== ""
       );
       setAssociations(associationsWithWallet);
-      
+
       // Si un événement est actif, pré-sélectionner l'association de cet événement
       const saved = localStorage.getItem("participatingEvent");
       if (saved) {
@@ -94,7 +97,27 @@ export default function DonatePage() {
   const loadVillageItems = () => {
     const saved = localStorage.getItem("villageItems");
     if (saved) {
-      setVillageItems(JSON.parse(saved));
+      const items = JSON.parse(saved);
+      // Migration: ajouter imageUrl pour les anciens items
+      const migratedItems = items.map((item: any) => {
+        if (!item.imageUrl) {
+          // Trouver l'item correspondant dans packsData
+          const packItem = Object.values(PACKS)
+            .flatMap((pack) => pack.pool)
+            .find((p) => p.id === item.id);
+
+          if (packItem) {
+            return {
+              ...item,
+              imageUrl: packItem.imageUrl,
+              cardImageUrl: packItem.cardImageUrl,
+            };
+          }
+        }
+        return item;
+      });
+      setVillageItems(migratedItems);
+      localStorage.setItem("villageItems", JSON.stringify(migratedItems));
     }
   };
 
@@ -102,17 +125,20 @@ export default function DonatePage() {
     const saved = localStorage.getItem("participatingEvent");
     if (saved) {
       const eventData = JSON.parse(saved);
-      
+
       // Migration : corriger l'ancien totalNeeded de 20 à 10
       if (eventData.totalNeeded === 20) {
         eventData.totalNeeded = 10;
         // Ajuster aussi usedBuckets proportionnellement si nécessaire
         if (eventData.usedBuckets > 10) {
-          eventData.usedBuckets = Math.min(10, Math.floor(eventData.usedBuckets / 2));
+          eventData.usedBuckets = Math.min(
+            10,
+            Math.floor(eventData.usedBuckets / 2)
+          );
         }
         localStorage.setItem("participatingEvent", JSON.stringify(eventData));
       }
-      
+
       setActiveEvent(eventData);
       const usedBuckets = eventData.usedBuckets || 0;
       const totalNeeded = eventData.totalNeeded || 10;
@@ -164,13 +190,18 @@ export default function DonatePage() {
   };
 
   const handleDonate = async () => {
-    if (!isConnected || !walletInfo || !selectedAssociation || !donationAmount) {
+    if (
+      !isConnected ||
+      !walletInfo ||
+      !selectedAssociation ||
+      !donationAmount
+    ) {
       alert("Veuillez remplir tous les champs et connecter votre wallet");
       return;
     }
 
     if (!selectedAssociation.walletAddress) {
-      alert('Cette association n\'a pas configuré son adresse wallet');
+      alert("Cette association n'a pas configuré son adresse wallet");
       return;
     }
 
@@ -184,29 +215,28 @@ export default function DonatePage() {
 
     try {
       // 1. Envoyer le paiement XRPL réel
-      const { sendPaymentWithWallet } = await import('@/lib/xrpl-client-service-v2');
-      
-      const currentWalletType = walletType || 'gem';
-      
-      const paymentResult = await sendPaymentWithWallet(
-        currentWalletType,
-        {
-          fromAddress: walletInfo.address,
-          toAddress: selectedAssociation.walletAddress,
-          amount,
-          memo: `Don à ${selectedAssociation.name}`,
-          eventMetadata: {
-            type: 'donation',
-            associationName: selectedAssociation.name,
-            amount,
-          },
-        }
+      const { sendPaymentWithWallet } = await import(
+        "@/lib/xrpl-client-service-v2"
       );
 
+      const currentWalletType = walletType || "gem";
+
+      const paymentResult = await sendPaymentWithWallet(currentWalletType, {
+        fromAddress: walletInfo.address,
+        toAddress: selectedAssociation.walletAddress,
+        amount,
+        memo: `Don à ${selectedAssociation.name}`,
+        eventMetadata: {
+          type: "donation",
+          associationName: selectedAssociation.name,
+          amount,
+        },
+      });
+
       // 2. Envoyer le txHash à l'API pour enregistrer le don
-      const response = await fetch('/api/donations/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/donations/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           walletAddress: walletInfo.address,
           associationWalletAddress: selectedAssociation.walletAddress,
@@ -219,45 +249,69 @@ export default function DonatePage() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Erreur lors du don');
+        throw new Error(data.error || "Erreur lors du don");
       }
 
       // Si un événement est actif et qu'on donne à l'association de l'événement,
       // donner des seaux d'eau au lieu de tirages normaux
-      const isEventDonation = activeEvent && activeEvent.associationId === selectedAssociation.id;
-      
+      const isEventDonation =
+        activeEvent && activeEvent.associationId === selectedAssociation.id;
+
       let items;
       if (isEventDonation) {
         // Calculer le nombre de seaux d'eau (1 seau par tranche de 5 XRP)
         const bucketCount = Math.floor(amount / 5);
-        items = Array(bucketCount).fill(null).map(() => ({
-          id: 'water_bucket',
-          name: 'Seau d\'eau',
-          rarity: 'COMMON',
-          type: 'water_bucket',
-          nftTokenId: null,
-        }));
-        console.log(`🔥 Don pour événement : ${bucketCount} seau(x) d'eau reçu(s) !`);
+
+        // Trouver l'item water_bucket dans packsData
+        const waterBucketItem = Object.values(PACKS)
+          .flatMap((pack) => pack.pool)
+          .find((p) => p.id === "water_bucket");
+
+        items = Array(bucketCount)
+          .fill(null)
+          .map(() => ({
+            id: "water_bucket",
+            name: "Seau d'eau",
+            rarity: "COMMON",
+            type: "water_bucket",
+            nftTokenId: null,
+            imageUrl: waterBucketItem?.imageUrl || "/images/sceau_eau.png",
+            cardImageUrl: waterBucketItem?.cardImageUrl,
+          }));
+        console.log(
+          `🔥 Don pour événement : ${bucketCount} seau(x) d'eau reçu(s) !`
+        );
       } else {
         // Tirages normaux - mapper les items de l'API
-        items = data.items.map((item: any) => ({
-          id: item.itemType,
-          name: item.itemName,
-          rarity: item.rarity,
-          type: item.itemType,
-          nftTokenId: item.nftTokenId,
-        }));
+        items = data.items.map((item: any) => {
+          // Trouver l'item correspondant dans packsData pour récupérer les images
+          const packItem = Object.values(PACKS)
+            .flatMap((pack) => pack.pool)
+            .find((p) => p.id === item.itemType);
+
+          return {
+            id: item.itemType,
+            name: item.itemName,
+            rarity: item.rarity,
+            type: item.itemType,
+            nftTokenId: item.nftTokenId,
+            imageUrl: packItem?.imageUrl,
+            cardImageUrl: packItem?.cardImageUrl,
+          };
+        });
       }
 
       setDrawnItems(items);
       const newVillageItems = [...villageItems, ...items];
       saveVillageItems(newVillageItems);
-      
+
       // Montrer l'ouverture du pack d'abord
       setShowPackOpening(true);
       setDonationAmount("");
-      
-      console.log(`✅ Don de ${amount} XRP envoyé avec succès ! Transaction: ${paymentResult.txHash}`);
+
+      console.log(
+        `✅ Don de ${amount} XRP envoyé avec succès ! Transaction: ${paymentResult.txHash}`
+      );
     } catch (error: any) {
       console.error("Erreur:", error);
       alert(error.message || "Erreur lors du don");
@@ -306,57 +360,75 @@ export default function DonatePage() {
 
               {/* Zone du village avec drag & drop */}
               <div className="relative rounded-xl overflow-hidden border-4 border-green-300">
-                <GardenCanvas 
+                <GardenCanvas
                   hasItems={villageItems.length > 0}
-                  backgroundImage={activeEvent ? "/images/biome_en_feu.png.webp" : "/village.png"}
+                  backgroundImage={
+                    activeEvent
+                      ? "/images/biome_en_feu.png.webp"
+                      : "/village.png"
+                  }
                   eventProgress={activeEvent ? eventProgress : undefined}
-                  usedBuckets={activeEvent ? (activeEvent.usedBuckets || 0) : 0}
-                  totalNeeded={activeEvent ? (activeEvent.totalNeeded || 10) : 10}
+                  usedBuckets={activeEvent ? activeEvent.usedBuckets || 0 : 0}
+                  totalNeeded={activeEvent ? activeEvent.totalNeeded || 10 : 10}
                   onItemPlaced={(itemId, quantity) => {
                     if (itemId === "water_bucket" && activeEvent) {
                       const newEvent = { ...activeEvent };
                       const previousBuckets = newEvent.usedBuckets || 0;
                       newEvent.usedBuckets = previousBuckets + quantity;
                       const totalNeeded = newEvent.totalNeeded || 10;
-                      const newProgress = Math.min(100, (newEvent.usedBuckets / totalNeeded) * 100);
-                      
+                      const newProgress = Math.min(
+                        100,
+                        (newEvent.usedBuckets / totalNeeded) * 100
+                      );
+
                       setActiveEvent(newEvent);
                       setEventProgress(newProgress);
-                      localStorage.setItem("participatingEvent", JSON.stringify(newEvent));
-                      
+                      localStorage.setItem(
+                        "participatingEvent",
+                        JSON.stringify(newEvent)
+                      );
+
                       if (newProgress >= 100) {
                         setTimeout(() => {
-                          alert(`🎉 Victoire ! Tu as éteint l'incendie avec ${newEvent.usedBuckets} sceaux d'eau !`);
+                          alert(
+                            `🎉 Victoire ! Tu as éteint l'incendie avec ${newEvent.usedBuckets} sceaux d'eau !`
+                          );
                           localStorage.removeItem("participatingEvent");
                           setActiveEvent(null);
                           setEventProgress(0);
                         }, 500);
                       }
                     }
-                    
+
                     const newItems = [...villageItems];
                     let removed = 0;
-                    
-                    for (let i = newItems.length - 1; i >= 0 && removed < quantity; i--) {
+
+                    for (
+                      let i = newItems.length - 1;
+                      i >= 0 && removed < quantity;
+                      i--
+                    ) {
                       if (newItems[i].id === itemId) {
                         newItems.splice(i, 1);
                         removed++;
                       }
                     }
-                    
+
                     saveVillageItems(newItems);
-                    
-                    const remaining = newItems.filter(i => i.id === itemId).length;
+
+                    const remaining = newItems.filter(
+                      (i) => i.id === itemId
+                    ).length;
                     if (remaining === 0) {
-                      setDragQuantities(prev => {
+                      setDragQuantities((prev) => {
                         const copy = { ...prev };
                         delete copy[itemId];
                         return copy;
                       });
                     } else if (dragQuantities[itemId] > remaining) {
-                      setDragQuantities(prev => ({
+                      setDragQuantities((prev) => ({
                         ...prev,
-                        [itemId]: remaining
+                        [itemId]: remaining,
                       }));
                     }
                   }}
@@ -376,7 +448,9 @@ export default function DonatePage() {
                     {villageItems.length > 0 && (
                       <button
                         onClick={() => {
-                          if (confirm('Voulez-vous vraiment vider l\'inventaire ?')) {
+                          if (
+                            confirm("Voulez-vous vraiment vider l'inventaire ?")
+                          ) {
                             saveVillageItems([]);
                           }
                         }}
@@ -395,7 +469,8 @@ export default function DonatePage() {
                       Tu n&apos;as encore aucun objet.
                     </p>
                     <p className="text-sm text-gray-600">
-                      Fais ton premier don pour débloquer ton tout premier élément du village !
+                      Fais ton premier don pour débloquer ton tout premier
+                      élément du village !
                     </p>
                   </div>
                 ) : (
@@ -408,18 +483,21 @@ export default function DonatePage() {
                           (i) => i.id === id
                         ).length;
                         const currentQuantity = dragQuantities[id] || 1;
-                        
+
                         return (
                           <div key={idx} className="flex flex-col items-center">
-                            <DraggableItem 
-                              item={item} 
+                            <DraggableItem
+                              item={item}
                               width={64}
                               quantity={Math.min(currentQuantity, count)}
                               onQuantityChange={(delta) => {
-                                const newQuantity = Math.max(1, Math.min(count, currentQuantity + delta));
-                                setDragQuantities(prev => ({
+                                const newQuantity = Math.max(
+                                  1,
+                                  Math.min(count, currentQuantity + delta)
+                                );
+                                setDragQuantities((prev) => ({
                                   ...prev,
-                                  [id]: newQuantity
+                                  [id]: newQuantity,
                                 }));
                               }}
                             />
@@ -450,30 +528,35 @@ export default function DonatePage() {
                   Faire un don
                 </h3>
 
-                {activeEvent && activeEvent.associationId === selectedAssociation.id && (
-                  <div className="mb-4 p-3 bg-orange-50 border-2 border-orange-300 rounded-lg">
-                    <div className="flex items-center gap-2 text-orange-800 mb-2">
-                      <span className="text-2xl">🔥</span>
-                      <div className="flex-1">
-                        <p className="font-bold text-sm">Événement actif dans ton village !</p>
-                        <p className="text-xs">
-                          Tes dons iront automatiquement à l'association de l'événement "{activeEvent.name}"
-                        </p>
+                {activeEvent &&
+                  activeEvent.associationId === selectedAssociation.id && (
+                    <div className="mb-4 p-3 bg-orange-50 border-2 border-orange-300 rounded-lg">
+                      <div className="flex items-center gap-2 text-orange-800 mb-2">
+                        <span className="text-2xl">🔥</span>
+                        <div className="flex-1">
+                          <p className="font-bold text-sm">
+                            Événement actif dans ton village !
+                          </p>
+                          <p className="text-xs">
+                            Tes dons iront automatiquement à l'association de
+                            l'événement "{activeEvent.name}"
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex items-center justify-between bg-orange-100 rounded px-3 py-2">
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg">💧</span>
-                        <span className="text-xs font-medium text-orange-900">
-                          Progression : {activeEvent.usedBuckets || 0} / {activeEvent.totalNeeded || 10} seaux
+                      <div className="flex items-center justify-between bg-orange-100 rounded px-3 py-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-lg">💧</span>
+                          <span className="text-xs font-medium text-orange-900">
+                            Progression : {activeEvent.usedBuckets || 0} /{" "}
+                            {activeEvent.totalNeeded || 10} seaux
+                          </span>
+                        </div>
+                        <span className="text-xs font-bold text-orange-700">
+                          {Math.round(eventProgress)}%
                         </span>
                       </div>
-                      <span className="text-xs font-bold text-orange-700">
-                        {Math.round(eventProgress)}%
-                      </span>
                     </div>
-                  </div>
-                )}
+                  )}
 
                 <div
                   className={`p-4 rounded-lg bg-gradient-to-r ${getTypeColor(
@@ -524,13 +607,18 @@ export default function DonatePage() {
                     </div>
 
                     {donationAmount && parseFloat(donationAmount) >= 5 && (
-                      <div className={`p-4 rounded-lg border mb-4 ${
-                        activeEvent && activeEvent.associationId === selectedAssociation?.id
-                          ? 'bg-orange-50 border-orange-200'
-                          : 'bg-green-50 border-green-200'
-                      }`}>
+                      <div
+                        className={`p-4 rounded-lg border mb-4 ${
+                          activeEvent &&
+                          activeEvent.associationId === selectedAssociation?.id
+                            ? "bg-orange-50 border-orange-200"
+                            : "bg-green-50 border-green-200"
+                        }`}
+                      >
                         <div className="flex items-center gap-2 mb-2">
-                          {activeEvent && activeEvent.associationId === selectedAssociation?.id ? (
+                          {activeEvent &&
+                          activeEvent.associationId ===
+                            selectedAssociation?.id ? (
                             <>
                               <span className="text-xl">💧</span>
                               <span className="font-bold text-orange-800">
@@ -546,7 +634,9 @@ export default function DonatePage() {
                             </>
                           )}
                         </div>
-                        {activeEvent && activeEvent.associationId === selectedAssociation?.id ? (
+                        {activeEvent &&
+                        activeEvent.associationId ===
+                          selectedAssociation?.id ? (
                           <>
                             <p className="text-sm text-orange-700">
                               Vous recevrez{" "}
@@ -626,7 +716,9 @@ export default function DonatePage() {
               ) : (
                 <div className="space-y-3 max-h-96 overflow-y-auto">
                   {associations.map((association) => {
-                    const isEventAssociation = activeEvent && activeEvent.associationId === association.id;
+                    const isEventAssociation =
+                      activeEvent &&
+                      activeEvent.associationId === association.id;
                     return (
                       <button
                         key={association.id}
@@ -723,15 +815,25 @@ export default function DonatePage() {
                   }`}
                 >
                   <div className="text-4xl mb-2">
-                    {item.id === "water_bucket" ? "💧" :
-                     item.id === "beehive" ? "🐝" :
-                     item.id === "world_tree" ? "🔥" :
-                     item.id === "tree_small" ? "🌲" :
-                     item.id === "rock" ? "🪨" :
-                     item.id === "flower" ? "🌸" :
-                     item.rarity === "LEGENDARY" ? "⭐" :
-                     item.rarity === "EPIC" ? "💎" :
-                     item.rarity === "RARE" ? "🌟" : "🌱"}
+                    {item.id === "water_bucket"
+                      ? "💧"
+                      : item.id === "beehive"
+                      ? "🐝"
+                      : item.id === "world_tree"
+                      ? "🔥"
+                      : item.id === "tree_small"
+                      ? "🌲"
+                      : item.id === "rock"
+                      ? "🪨"
+                      : item.id === "flower"
+                      ? "🌸"
+                      : item.rarity === "LEGENDARY"
+                      ? "⭐"
+                      : item.rarity === "EPIC"
+                      ? "💎"
+                      : item.rarity === "RARE"
+                      ? "🌟"
+                      : "🌱"}
                   </div>
                   <div className="font-bold text-gray-900 text-sm mb-1">
                     {item.name}
