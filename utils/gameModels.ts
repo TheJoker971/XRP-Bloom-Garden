@@ -20,10 +20,11 @@ export interface PackItem {
   name: string;
   rarity: Rarity;
   description?: string;
+  imageUrl?: string;
+  cardImageUrl?: string; // Image de la carte pour la révélation
 }
 
 export interface DrawnItem extends PackItem {
   packId: string;
   packName: string;
 }
-
