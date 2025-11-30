@@ -53,6 +53,8 @@ export default function DraggableItem({
     return emojiMap[id] || "📦";
   };
 
+  console.log(`🎨 DraggableItem rendering: ${item.id}, imageUrl: ${item.imageUrl}`);
+
   return (
     <div
       style={{

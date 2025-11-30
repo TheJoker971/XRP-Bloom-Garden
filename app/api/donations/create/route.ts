@@ -103,6 +103,7 @@ export async function POST(request: NextRequest) {
       items: items.map(item => ({
         id: item.id,
         itemName: item.itemName,
+        itemType: item.itemType, // Ajouter itemType pour trouver l'image
         rarity: item.rarity,
         nftTokenId: item.nftTokenId,
         nftTxHash: item.nftTxHash,
