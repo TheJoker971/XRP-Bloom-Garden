@@ -289,6 +289,8 @@ export default function DonatePage() {
             .flatMap((pack) => pack.pool)
             .find((p) => p.id === item.itemType);
 
+          console.log(`🔍 Item: ${item.itemType}, Found packItem:`, packItem);
+
           return {
             id: item.itemType,
             name: item.itemName,
@@ -301,6 +303,7 @@ export default function DonatePage() {
         });
       }
 
+      console.log('📦 Items with images:', items);
       setDrawnItems(items);
       const newVillageItems = [...villageItems, ...items];
       saveVillageItems(newVillageItems);
